@@ -1,0 +1,37 @@
+From www.blogforbrains.com/blog/2014/9/6/loading-matlab-mat-data-in-python
+
+A friend of mine just asked me for some tips with this. I thought I would reply using a blog post so that it can be useful to other people too. If you collect data with Matlab but want to work on it using Python (e.g. making nice graphs with matplotlib) you can export a .mat file and then import that into Python using SciPy.
+
+First let's save some example data in Matlab:
+
+function savematlabdata
+% save some data in a .mat
+
+a = [1, 2, 3; 4, 5, 6];
+S.b = [7, 8, 9; 10, 11, 12];
+M(1).c = [2, 4, 6; 8, 10, 12];
+M(2).c = [1, 3, 5; 7, 9, 11];
+
+save('data.mat','a','S','M')
+
+return
+Now we have a file "data.mat" which stores the array a, the structure S containing an array b, and an array of structures M where each of those contains an array c. Now we can load that data in Python with the scipy.io module and use the "print" function to prove it's there:
+
+# filename: loadmatlabdata.py
+# description : load in data from a .mat file
+# author: Alex Baldwin
+#==============================================
+
+import scipy.io as spio
+
+mat = spio.loadmat('data.mat', squeeze_me=True)
+
+a = mat['a'] # array
+S = mat['S'] # structure containing an array
+M = mat['M'] # array of structures
+
+print a[:,:]
+print S['b'][()][:,:] # structures need [()]
+print M[0]['c'][()][:,:]
+print M[1]['c'][()][:,:]
+Remember that in Python indexing starts at 0, rather than 1 (which is how Matlab does it). I hope that helps!
