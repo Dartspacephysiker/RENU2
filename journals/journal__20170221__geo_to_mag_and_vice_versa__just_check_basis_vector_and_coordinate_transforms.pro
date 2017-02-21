@@ -38,23 +38,13 @@ PRO JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_CO
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;Times in CDF epoch time
-  time_epoch    = UTC_TO_CDF_EPOCH(renu2.time.utc)
-
-  IF FILE_TEST(outDir+timeStrFile) THEN BEGIN
-     PRINT,"Restoring timeString file " + outDir+timeStrFile + ' ...'
-     RESTORE,outDir+timeStrFile
-  ENDIF ELSE BEGIN
-     PRINT,"Making " + STRCOMPRESS(N_ELEMENTS(renu2.time.utc),/REMOVE_ALL) + " time strings ..."
-     timeStr       = TIME_TO_STR(renu2.time.utc,/MS)
-
-     PRINT,"Saving timeStrs ..."
-     SAVE,timeStr,FILENAME=outDir+timeStrFile
-  ENDELSE
-  
   t1JulDay      = JULDAY(01,01,1997,00,00,00)
   t2JulDay      = JULDAY(12,31,2016,00,00,00)
   julArr        = TIMEGEN_EASIER(t1JulDay,t2JulDay,NMONTHS_PER_CALC=6)
   timeStr       = TIME_TO_STR(JULDAY_TO_UTC(julArr))
+
+  time_epoch    = UTC_TO_CDF_EPOCH(JULDAY_TO_UTC(julArr))
+
   ;;PRINT,TIME_TO_STR(JULDAY_TO_UTC(julArr))
   ;;1997-01-01/00:00:00
   ;;1997-07-01/00:00:00
@@ -79,15 +69,31 @@ PRO JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_CO
 
   TiltArr        = !NULL
 
-  basis_vecs     = 
+  ident          = IDENTITY(3)
 
-  GEI_arr        = MAKE_ARRAY(3,nTot,/FLOAT)
-  GEO_arr        = MAKE_ARRAY(3,nTot,/FLOAT)
-  MAG_arr        = MAKE_ARRAY(3,nTot,/FLOAT)
+  GEOin_arr      = MAKE_ARRAY(3,3,nTot,/FLOAT)
 
-  GEOSph_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
-  GEOvelSph_arr  = MAKE_ARRAY(3,nTot,/FLOAT)
-  MAGSph_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
+  GEO2MAG_coord  = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  GEO2GEI_coord  = MAKE_ARRAY(3,3,nTot,/FLOAT)
+
+  MAG2GEO_coord  = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  MAG2GEI_coord  = MAKE_ARRAY(3,3,nTot,/FLOAT)
+
+  GEO2MAG_vec    = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  GEO2GEI_vec    = MAKE_ARRAY(3,3,nTot,/FLOAT)
+
+  MAG2GEO_vec    = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  MAG2GEI_vec    = MAKE_ARRAY(3,3,nTot,/FLOAT)
+
+  GEO2MAG_sphC   = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  GEO2GEI_sphC   = MAKE_ARRAY(3,3,nTot,/FLOAT)
+
+  MAG2GEO_sphC   = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  MAG2GEI_sphC   = MAKE_ARRAY(3,3,nTot,/FLOAT)
+
+  ;; GEOSph_arr     = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  ;; GEOSph_arr     = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  ;; MAGSph_arr     = MAKE_ARRAY(3,3,nTot,/FLOAT)
 
   CASE 1 OF
      KEYWORD_SET(use_geopack_08): BEGIN
@@ -96,60 +102,96 @@ PRO JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_CO
 
            ;;do that dance
 
-           ;;To GEI
-           GEOPACK_CONV_COORD_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                              gei_x,gei_y,gei_z, $
+           ;;GEO to GEI
+           GEOPACK_CONV_COORD_08,ident[0,0],ident[0,1],ident[0,2], $
+                              geo2gei_x0,geo2gei_y0,geo2gei_z0, $
                               /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
-           ;;To MAG
-           GEOPACK_CONV_COORD_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                              mag_x,mag_y,mag_z, $
+
+           GEOPACK_CONV_COORD_08,ident[1,0],ident[1,1],ident[1,2], $
+                              geo2gei_x1,geo2gei_y1,geo2gei_z1, $
+                              /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
+
+           GEOPACK_CONV_COORD_08,ident[2,0],ident[2,1],ident[2,2], $
+                              geo2gei_x2,geo2gei_y2,geo2gei_z2, $
+                              /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
+
+           ;;GEO to MAG
+           GEOPACK_CONV_COORD_08,ident[0,0],ident[0,1],ident[0,2], $
+                              mag_x0,mag_y0,mag_z0, $
                               /FROM_GEO,/TO_MAG,EPOCH=time_epoch[i]
 
-           ;;To GSM for IGRF calc
-           GEOPACK_CONV_COORD_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                                 gsm_x,gsm_y,gsm_z, $
-                              /FROM_GEO,/TO_GSW,EPOCH=time_epoch[i]
+           GEOPACK_CONV_COORD_08,ident[1,0],ident[1,1],ident[1,2], $
+                              mag_x1,mag_y1,mag_z1, $
+                              /FROM_GEO,/TO_MAG,EPOCH=time_epoch[i]
 
+           GEOPACK_CONV_COORD_08,ident[2,0],ident[2,1],ident[2,2], $
+                              mag_x2,mag_y2,mag_z2, $
+                              /FROM_GEO,/TO_MAG,EPOCH=time_epoch[i]
 
+           ;;MAG to GEI
+           GEOPACK_CONV_COORD_08,ident[0,0],ident[0,1],ident[0,2], $
+                              mag2gei_x0,mag2gei_y0,mag2gei_z0, $
+                              /FROM_MAG,/TO_GEI,EPOCH=time_epoch[i]
+
+           GEOPACK_CONV_COORD_08,ident[1,0],ident[1,1],ident[1,2], $
+                              mag2gei_x1,mag2gei_y1,mag2gei_z1, $
+                              /FROM_MAG,/TO_GEI,EPOCH=time_epoch[i]
+
+           GEOPACK_CONV_COORD_08,ident[2,0],ident[2,1],ident[2,2], $
+                              mag2gei_x2,mag2gei_y2,mag2gei_z2, $
+                              /FROM_MAG,/TO_GEI,EPOCH=time_epoch[i]
+
+           ;;MAG to GEO
+           GEOPACK_CONV_COORD_08,ident[0,0],ident[0,1],ident[0,2], $
+                              geo_x0,geo_y0,geo_z0, $
+                              /FROM_MAG,/TO_GEO,EPOCH=time_epoch[i]
+
+           GEOPACK_CONV_COORD_08,ident[1,0],ident[1,1],ident[1,2], $
+                              geo_x1,geo_y1,geo_z1, $
+                              /FROM_MAG,/TO_GEO,EPOCH=time_epoch[i]
+
+           GEOPACK_CONV_COORD_08,ident[2,0],ident[2,1],ident[2,2], $
+                              geo_x2,geo_y2,geo_z2, $
+                              /FROM_MAG,/TO_GEO,EPOCH=time_epoch[i]
+
+           ;;Store coord conversions
+           GEO2MAG_coord[*,*,i]  = [[mag_x0,mag_y0,mag_z0],[mag_x1,mag_y1,mag_z1],[mag_x2,mag_y2,mag_z2]]
+           GEO2GEI_coord[*,*,i]  = [[geo2gei_x0,geo2gei_y0,geo2gei_z0],[geo2gei_x1,geo2gei_y1,geo2gei_z1],[geo2gei_x2,geo2gei_y2,geo2gei_z2]]
+           
+           MAG2GEO_coord[*,*,i]  = [[geo_x0,geo_y0,geo_z0],[geo_x1,geo_y1,geo_z1],[geo_x2,geo_y2,geo_z2]]
+           MAG2GEI_coord[*,*,i]  = [[mag2gei_x0,mag2gei_y0,mag2gei_z0],[mag2gei_x1,mag2gei_y1,mag2gei_z1],[mag2gei_x2,mag2gei_y2,mag2gei_z2]]
+
+           GEO2MAG_vec[*,*,i]    = INVERT(GEO2MAG_coord[*,*,i])
+           GEO2GEI_vec[*,*,i]    = INVERT(GEO2GEI_coord[*,*,i])
+           MAG2GEO_vec[*,*,i]    = INVERT(MAG2GEO_coord[*,*,i])
+           MAG2GEI_vec[*,*,i]    = INVERT(MAG2GEI_coord[*,*,i])
+           
            ;;And spherical everything
-           GEOPACK_SPHCAR_08,gei_x,gei_y,gei_z,gei_r,gei_theta,gei_phi,/TO_SPHERE,/DEGREE
-           GEOPACK_SPHCAR_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                          geo_r,geo_theta,geo_phi,/TO_SPHERE,/DEGREE
-           GEOPACK_SPHCAR_08,renu2.ecef.velocity.x[i],renu2.ecef.velocity.y[i],renu2.ecef.velocity.z[i], $
-                          geoVel_r,geoVel_theta,geoVel_phi,/TO_SPHERE,/DEGREE
-           GEOPACK_SPHCAR_08,mag_x,mag_y,mag_z,mag_r,mag_theta,mag_phi,/TO_SPHERE,/DEGREE
+           
+           GEOPACK_SPHCAR_08,mag_x0,mag_y0,mag_z0,mag_r0,mag_theta0,mag_phi0,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,mag_x1,mag_y1,mag_z1,mag_r1,mag_theta1,mag_phi1,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,mag_x2,mag_y2,mag_z2,mag_r2,mag_theta2,mag_phi2,/TO_SPHERE,/DEGREE
 
-           ;;Get IGRF
-           gsm_xyz_R_E = [gsm_x,gsm_y,gsm_z]/1000.D/R_E
-           ;; GEOPACK_RECALC_08,YearArr[i],MonthArr[i],DayArr[i],HourArr[i],MinArr[i],SecArr[i],/DATE 
-           GEOPACK_IGRF_GEO_08,geo_r/1000./R_E,geo_theta,geo_phi,br,btheta,bphi,EPOCH=time_epoch[i],/DEGREE
-           GEOPACK_BSPCAR_08  ,geo_theta,geo_phi,br,btheta,bphi,bx,by,bz,/DEGREE ; ,EPOCH=time_epoch[i]
+           GEOPACK_SPHCAR_08,geo2gei_x0,geo2gei_y0,geo2gei_z0,geo2gei_r0,geo2gei_theta0,geo2gei_phi0,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,geo2gei_x1,geo2gei_y1,geo2gei_z1,geo2gei_r1,geo2gei_theta1,geo2gei_phi1,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,geo2gei_x2,geo2gei_y2,geo2gei_z2,geo2gei_r2,geo2gei_theta2,geo2gei_phi2,/TO_SPHERE,/DEGREE
 
-           ;;alternate shot at IGRF
-           GEOPACK_IGRF_GSW_08,gsm_xyz_R_E[0],gsm_xyz_R_E[1],gsm_xyz_R_E[2],bx_gsm,by_gsm,bz_gsm,EPOCH=time_epoch[i] ;,/DEGREE
+           GEOPACK_SPHCAR_08,geo_x0,geo_y0,geo_z0,geo_r0,geo_theta0,geo_phi0,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,geo_x1,geo_y1,geo_z1,geo_r1,geo_theta1,geo_phi1,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,geo_x2,geo_y2,geo_z2,geo_r2,geo_theta2,geo_phi2,/TO_SPHERE,/DEGREE
 
-           ;;Dipole, please?
-           GEOPACK_DIP_08,gsm_xyz_R_E[1],gsm_xyz_R_E[1],gsm_xyz_R_E[2],bx_dip,by_dip,bz_dip,EPOCH=time_epoch[i] ;,/DEGREE
-
+           GEOPACK_SPHCAR_08,mag2gei_x0,mag2gei_y0,mag2gei_z0,mag2gei_r0,mag2gei_theta0,mag2gei_phi0,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,mag2gei_x1,mag2gei_y1,mag2gei_z1,mag2gei_r1,mag2gei_theta1,mag2gei_phi1,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,mag2gei_x2,mag2gei_y2,mag2gei_z2,mag2gei_r2,mag2gei_theta2,mag2gei_phi2,/TO_SPHERE,/DEGREE
 
            ;;Update spherical
-           GEISph_arr[*,i]    = [gei_theta,gei_phi,gei_r] 
-           GEOSph_arr[*,i]    = [geo_theta,geo_phi,geo_r] ;Redundant, yes, but a check
-           GEOvelSph_arr[*,i] = [geoVel_theta,geoVel_phi,geoVel_r]
-           IGRFSph_arr[*,i]   = [btheta,bphi,br] 
-           MAGSph_arr[*,i]    = [mag_theta,mag_phi,mag_r] 
+           GEO2MAG_sphC[*,*,i]  = [[mag_r0,mag_theta0,mag_phi0],[mag_r1,mag_theta1,mag_phi1],[mag_r2,mag_theta2,mag_phi2]]
+           GEO2GEI_sphC[*,*,i]  = [[geo2gei_r0,geo2gei_theta0,geo2gei_phi0],[geo2gei_r1,geo2gei_theta1,geo2gei_phi1],[geo2gei_r2,geo2gei_theta2,geo2gei_phi2]]
+           
+           MAG2GEO_sphC[*,*,i]  = [[geo_r0,geo_theta0,geo_phi0],[geo_r1,geo_theta1,geo_phi1],[geo_r2,geo_theta2,geo_phi2]]
+           MAG2GEI_sphC[*,*,i]  = [[mag2gei_r0,mag2gei_theta0,mag2gei_phi0],[mag2gei_r1,mag2gei_theta1,mag2gei_phi1],[mag2gei_r2,mag2gei_theta2,mag2gei_phi2]]
 
-           ;;Update not-spherical
-           ;; TiltArr    = [TiltArr,tempTilt]
-           GEI_arr[*,i]  = [gei_x,gei_y,gei_z]
-           GSM_arr[*,i]  = [gsm_x,gsm_y,gsm_z]
-           ;; GEO_arr[*,i]  = [geo_x,geo_y,geo_z]
-           IGRF_arr[*,i] = [bx,by,bz]
-           IGRFGSM_arr[*,i] = [bx_gsm,by_gsm,bz_gsm]
-           IGRFDIP_arr[*,i] = [bx_dip,by_dip,bz_dip]
-           MAG_arr[*,i]  = [mag_x,mag_y,mag_z]
-
-           IF (i MOD 100) EQ 0 THEN PRINT,i
+           PRINT,i
         ENDFOR
      END
      ELSE: BEGIN
