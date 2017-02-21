@@ -91,6 +91,12 @@ PRO JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_CO
   MAG2GEO_sphC   = MAKE_ARRAY(3,3,nTot,/FLOAT)
   MAG2GEI_sphC   = MAKE_ARRAY(3,3,nTot,/FLOAT)
 
+  GEO2MAG_sphV   = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  GEO2GEI_sphV   = MAKE_ARRAY(3,3,nTot,/FLOAT)
+
+  MAG2GEO_sphV   = MAKE_ARRAY(3,3,nTot,/FLOAT)
+  MAG2GEI_sphV   = MAKE_ARRAY(3,3,nTot,/FLOAT)
+
   ;; GEOSph_arr     = MAKE_ARRAY(3,3,nTot,/FLOAT)
   ;; GEOSph_arr     = MAKE_ARRAY(3,3,nTot,/FLOAT)
   ;; MAGSph_arr     = MAKE_ARRAY(3,3,nTot,/FLOAT)
@@ -155,17 +161,81 @@ PRO JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_CO
                               /FROM_MAG,/TO_GEO,EPOCH=time_epoch[i]
 
            ;;Store coord conversions
-           GEO2MAG_coord[*,*,i]  = [[mag_x0,mag_y0,mag_z0],[mag_x1,mag_y1,mag_z1],[mag_x2,mag_y2,mag_z2]]
-           GEO2GEI_coord[*,*,i]  = [[geo2gei_x0,geo2gei_y0,geo2gei_z0],[geo2gei_x1,geo2gei_y1,geo2gei_z1],[geo2gei_x2,geo2gei_y2,geo2gei_z2]]
+           GEO2MAG_coord[*,*,i]  = [[mag_x0,mag_y0,mag_z0], $
+                                    [mag_x1,mag_y1,mag_z1], $
+                                    [mag_x2,mag_y2,mag_z2]]
+           GEO2GEI_coord[*,*,i]  = [[geo2gei_x0,geo2gei_y0,geo2gei_z0], $
+                                    [geo2gei_x1,geo2gei_y1,geo2gei_z1], $
+                                    [geo2gei_x2,geo2gei_y2,geo2gei_z2]]
            
-           MAG2GEO_coord[*,*,i]  = [[geo_x0,geo_y0,geo_z0],[geo_x1,geo_y1,geo_z1],[geo_x2,geo_y2,geo_z2]]
-           MAG2GEI_coord[*,*,i]  = [[mag2gei_x0,mag2gei_y0,mag2gei_z0],[mag2gei_x1,mag2gei_y1,mag2gei_z1],[mag2gei_x2,mag2gei_y2,mag2gei_z2]]
+           MAG2GEO_coord[*,*,i]  = [[geo_x0,geo_y0,geo_z0], $
+                                    [geo_x1,geo_y1,geo_z1], $
+                                    [geo_x2,geo_y2,geo_z2]]
+           MAG2GEI_coord[*,*,i]  = [[mag2gei_x0,mag2gei_y0,mag2gei_z0], $
+                                    [mag2gei_x1,mag2gei_y1,mag2gei_z1], $
+                                    [mag2gei_x2,mag2gei_y2,mag2gei_z2]]
 
            GEO2MAG_vec[*,*,i]    = INVERT(GEO2MAG_coord[*,*,i])
            GEO2GEI_vec[*,*,i]    = INVERT(GEO2GEI_coord[*,*,i])
            MAG2GEO_vec[*,*,i]    = INVERT(MAG2GEO_coord[*,*,i])
            MAG2GEI_vec[*,*,i]    = INVERT(MAG2GEI_coord[*,*,i])
            
+
+           GEOPACK_BCARSP_08,geo2gei_x0,geo2gei_y0,geo2gei_z0, $
+                             GEO2GEI_vec[0,0,i],GEO2GEI_vec[0,1,i],GEO2GEI_vec[0,2,i], $
+                             geo2geiVSph_r0,geo2geiVSph_theta0,geo2geiVSph_phi0
+           GEOPACK_BCARSP_08,geo2gei_x1,geo2gei_y1,geo2gei_z1, $
+                             GEO2GEI_vec[1,0,i],GEO2GEI_vec[1,1,i],GEO2GEI_vec[1,2,i], $
+                             geo2geiVSph_r1,geo2geiVSph_theta1,geo2geiVSph_phi1
+           GEOPACK_BCARSP_08,geo2gei_x2,geo2gei_y2,geo2gei_z2, $
+                             GEO2GEI_vec[2,0,i],GEO2GEI_vec[2,1,i],GEO2GEI_vec[2,2,i], $
+                             geo2geiVSph_r2,geo2geiVSph_theta2,geo2geiVSph_phi2
+
+           GEOPACK_BCARSP_08,mag_x0,mag_y0,mag_z0, $
+                             GEO2MAG_vec[0,0,i],GEO2MAG_vec[0,1,i],GEO2MAG_vec[0,2,i], $
+                             magVSph_r0,magVSph_theta0,magVSph_phi0
+           GEOPACK_BCARSP_08,mag_x1,mag_y1,mag_z1, $
+                             GEO2MAG_vec[1,0,i],GEO2MAG_vec[1,1,i],GEO2MAG_vec[1,2,i], $
+                             magVSph_r1,magVSph_theta1,magVSph_phi1
+           GEOPACK_BCARSP_08,mag_x2,mag_y2,mag_z2, $
+                             GEO2MAG_vec[2,0,i],GEO2MAG_vec[2,1,i],GEO2MAG_vec[2,2,i], $
+                             magVSph_r2,magVSph_theta2,magVSph_phi2
+
+           GEOPACK_BCARSP_08,geo_x0,geo_y0,geo_z0, $
+                             MAG2GEO_vec[0,0,i],MAG2GEO_vec[0,1,i],MAG2GEO_vec[0,2,i], $
+                             geoVSph_r0,geoVSph_theta0,geoVSph_phi0
+           GEOPACK_BCARSP_08,geo_x1,geo_y1,geo_z1, $
+                             MAG2GEO_vec[1,0,i],MAG2GEO_vec[1,1,i],MAG2GEO_vec[1,2,i], $
+                             geoVSph_r1,geoVSph_theta1,geoVSph_phi1
+           GEOPACK_BCARSP_08,geo_x2,geo_y2,geo_z2, $
+                             MAG2GEO_vec[2,0,i],MAG2GEO_vec[2,1,i],MAG2GEO_vec[2,2,i], $
+                             geoVSph_r2,geoVSph_theta2,geoVSph_phi2
+
+           GEOPACK_BCARSP_08,mag2gei_x0,mag2gei_y0,mag2gei_z0, $
+                             MAG2GEI_vec[0,0,i],MAG2GEI_vec[0,1,i],MAG2GEI_vec[0,2,i], $
+                             mag2geiVSph_r0,mag2geiVSph_theta0,mag2geiVSph_phi0
+           GEOPACK_BCARSP_08,mag2gei_x1,mag2gei_y1,mag2gei_z1, $
+                             MAG2GEI_vec[1,0,i],MAG2GEI_vec[1,1,i],MAG2GEI_vec[1,2,i], $
+                             mag2geiVSph_r1,mag2geiVSph_theta1,mag2geiVSph_phi1
+           GEOPACK_BCARSP_08,mag2gei_x2,mag2gei_y2,mag2gei_z2, $
+                             MAG2GEI_vec[2,0,i],MAG2GEI_vec[2,1,i],MAG2GEI_vec[2,2,i], $
+                             mag2geiVSph_r2,mag2geiVSph_theta2,mag2geiVSph_phi2
+
+           GEO2MAG_sphV[*,*,i]   = [[magVSph_r0,magVSph_theta0,magVSph_phi0], $
+                                    [magVSph_r1,magVSph_theta1,magVSph_phi1], $
+                                    [magVSph_r2,magVSph_theta2,magVSph_phi2]]
+           GEO2GEI_sphV[*,*,i]   = [[geo2geiVSph_r0,geo2geiVSph_theta0,geo2geiVSph_phi0], $
+                                    [geo2geiVSph_r1,geo2geiVSph_theta1,geo2geiVSph_phi1], $
+                                    [geo2geiVSph_r2,geo2geiVSph_theta2,geo2geiVSph_phi2]]
+
+           MAG2GEO_sphV[*,*,i]   = [[geoVSph_r0,geoVSph_theta0,geoVSph_phi0], $
+                                    [geoVSph_r1,geoVSph_theta1,geoVSph_phi1], $
+                                    [geoVSph_r2,geoVSph_theta2,geoVSph_phi2]]
+           MAG2GEI_sphV[*,*,i]   = [[mag2geiVSph_r0,mag2geiVSph_theta0,mag2geiVSph_phi0], $
+                                    [mag2geiVSph_r1,mag2geiVSph_theta1,mag2geiVSph_phi1], $
+                                    [mag2geiVSph_r2,mag2geiVSph_theta2,mag2geiVSph_phi2]]
+           
+
            ;;And spherical everything
            
            GEOPACK_SPHCAR_08,mag_x0,mag_y0,mag_z0,mag_r0,mag_theta0,mag_phi0,/TO_SPHERE,/DEGREE
@@ -185,11 +255,19 @@ PRO JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_CO
            GEOPACK_SPHCAR_08,mag2gei_x2,mag2gei_y2,mag2gei_z2,mag2gei_r2,mag2gei_theta2,mag2gei_phi2,/TO_SPHERE,/DEGREE
 
            ;;Update spherical
-           GEO2MAG_sphC[*,*,i]  = [[mag_r0,mag_theta0,mag_phi0],[mag_r1,mag_theta1,mag_phi1],[mag_r2,mag_theta2,mag_phi2]]
-           GEO2GEI_sphC[*,*,i]  = [[geo2gei_r0,geo2gei_theta0,geo2gei_phi0],[geo2gei_r1,geo2gei_theta1,geo2gei_phi1],[geo2gei_r2,geo2gei_theta2,geo2gei_phi2]]
+           GEO2MAG_sphC[*,*,i]  = [[mag_r0,mag_theta0,mag_phi0], $
+                                   [mag_r1,mag_theta1,mag_phi1], $
+                                   [mag_r2,mag_theta2,mag_phi2]]
+           GEO2GEI_sphC[*,*,i]  = [[geo2gei_r0,geo2gei_theta0,geo2gei_phi0], $
+                                   [geo2gei_r1,geo2gei_theta1,geo2gei_phi1], $
+                                   [geo2gei_r2,geo2gei_theta2,geo2gei_phi2]]
            
-           MAG2GEO_sphC[*,*,i]  = [[geo_r0,geo_theta0,geo_phi0],[geo_r1,geo_theta1,geo_phi1],[geo_r2,geo_theta2,geo_phi2]]
-           MAG2GEI_sphC[*,*,i]  = [[mag2gei_r0,mag2gei_theta0,mag2gei_phi0],[mag2gei_r1,mag2gei_theta1,mag2gei_phi1],[mag2gei_r2,mag2gei_theta2,mag2gei_phi2]]
+           MAG2GEO_sphC[*,*,i]  = [[geo_r0,geo_theta0,geo_phi0], $
+                                   [geo_r1,geo_theta1,geo_phi1], $
+                                   [geo_r2,geo_theta2,geo_phi2]]
+           MAG2GEI_sphC[*,*,i]  = [[mag2gei_r0,mag2gei_theta0,mag2gei_phi0], $
+                                   [mag2gei_r1,mag2gei_theta1,mag2gei_phi1], $
+                                   [mag2gei_r2,mag2gei_theta2,mag2gei_phi2]]
 
            PRINT,i
         ENDFOR
