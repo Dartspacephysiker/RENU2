@@ -1,19 +1,29 @@
-;2017/02/21
-PRO JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_COORDINATE_TRANSFORMS
+;;2017/02/22
+PRO JOURNAL__20170222__02__COMPARE_VELMAG_WITH_ECEF_VEL__CONV_COORDS__SAVE
 
   COMPILE_OPT IDL2
 
-  orig_routineName = 'JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_COORDINATE_TRANSFORMS'
+  orig_routineName = 'JOURNAL__20170222__02__COMPARE_VELMAG_WITH_ECEF_VEL__CONV_COORDS__SAVE'
   R_E              = 6371.2D    ;Earth radius in km, from IGRFLIB_V2.pro
 
   outDir           = '/SPENCEdata/Research/database/RENU2/'
 
   inFile           = 'RENU2_GPS.sav'
+  inFile2          = 'velMAG.idl'
   timeStrFile      = 'RENU2_GPS--timeStr.sav'
   outFile          = 'RENU2_coordinates.sav'
 
 
   RESTORE,outDir+inFile
+  RESTORE,outDir+inFile2
+
+  vMag1 = SQRT(renu2.ecef.velocity.x*renu2.ecef.velocity.x + $
+               renu2.ecef.velocity.y*renu2.ecef.velocity.y + $
+               renu2.ecef.velocity.z*renu2.ecef.velocity.z)
+  vMag2 = velMag.vTot
+
+
+  STOP
 
   ;; GEOPACK_CONV_COORD
   ;; Description: Convert between a variety of commonly used coordinate systems.

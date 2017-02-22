@@ -2,6 +2,9 @@
 ;Gonna need this one for transforming geo to mag. It's got your solution:
 ;http://jsoc.stanford.edu/~jsoc/keywords/Chris_Russel/Geophysical%20Coordinate%20Transformations.htm#s3
 ;Gonna need this one to brush up on Euler rotations: https://en.wikipedia.org/wiki/Euler_angles
+;
+;More enlightenment can be had in JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_COORDINATE_TRANSFORMS,
+;where I think I show that the solution on the Stanford website above is wrong
 PRO JOURNAL__20170216__GEO_TO_MAG_VECTOR_TRANSFORM__CHECK_INVERSION_OF_MATRIX_IN_NOTEBOOK,Z1Y2Z3=z1y2z3,BRO=bro
 
   COMPILE_OPT IDL2
