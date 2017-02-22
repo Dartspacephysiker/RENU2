@@ -24,3 +24,9 @@ for key in velmagdat:
     print '{:15} : {:25}'.format(key , type(velmagdat[key]), len(velmagdat[key]))
 
     print ' '
+
+print 'ndim : {:>10}'.format(velmagdat['velMAG'].ndim)
+print 'shape: {:>10}'.format(velmagdat['velMAG'].shape)
+print 'dtype: {:>10}'.format(velmagdat['velMAG'].dtype)
+
+veldat = velmagdat['velMAG'].data
