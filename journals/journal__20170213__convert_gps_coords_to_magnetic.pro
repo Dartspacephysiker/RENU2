@@ -69,29 +69,43 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
 
   TiltArr          = !NULL
 
-  GEI_arr          = MAKE_ARRAY(3,nTot,/FLOAT)
-  GSM_arr          = MAKE_ARRAY(3,nTot,/FLOAT)
+  pos_GEI_arr      = MAKE_ARRAY(3,nTot,/FLOAT)
+  pos_GSM_arr      = MAKE_ARRAY(3,nTot,/FLOAT)
   ;; GEO_arr       = MAKE_ARRAY(3,nTot,/FLOAT)
-  IGRF_GEO_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
-  IGRF_GSM_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
-  IGRF_GSM_DIP_arr      = MAKE_ARRAY(3,nTot,/FLOAT)
-  MAG_arr          = MAKE_ARRAY(3,nTot,/FLOAT)
 
-  GEISph_arr       = MAKE_ARRAY(3,nTot,/FLOAT)
-  GEOSph_arr       = MAKE_ARRAY(3,nTot,/FLOAT)
+  pos_MAG_arr      = MAKE_ARRAY(3,nTot,/FLOAT)
+  pos_GEISph_arr   = MAKE_ARRAY(3,nTot,/FLOAT)
+  pos_GEOSph_arr   = MAKE_ARRAY(3,nTot,/FLOAT)
+  pos_GSMSph_arr   = MAKE_ARRAY(3,nTot,/DOUBLE)
+  pos_NEDArr       = MAKE_ARRAY(3,nTot,/DOUBLE)
+
   vel_GEOSphArr    = MAKE_ARRAY(3,nTot,/DOUBLE)
   vel_MAGArr       = MAKE_ARRAY(3,nTot,/DOUBLE)
   vel_MAGSphArr    = MAKE_ARRAY(3,nTot,/DOUBLE)
+  vel_NEDArr       = MAKE_ARRAY(3,nTot,/DOUBLE)
+
+  IGRF_GEO_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
   IGRF_GEO_sphArr  = MAKE_ARRAY(3,nTot,/FLOAT)
+  IGRF_GSM_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
   IGRF_GSM_sphArr  = MAKE_ARRAY(3,nTot,/FLOAT)
-  MAGSph_arr       = MAKE_ARRAY(3,nTot,/DOUBLE)
+  IGRF_GSM_DIP_arr = MAKE_ARRAY(3,nTot,/FLOAT)
+
+  pos_MAGSph_arr   = MAKE_ARRAY(3,nTot,/DOUBLE)
 
   ;;for vector transforms
   ident            = IDENTITY(3,/DOUBLE) 
+
+  GEO2GEI_coord    = MAKE_ARRAY(3,3,nTot,/DOUBLE)
+  GEO2GEI_vec      = MAKE_ARRAY(3,3,nTot,/DOUBLE)
+
   GEO2MAG_coord    = MAKE_ARRAY(3,3,nTot,/DOUBLE)
   GEO2MAG_sphC     = MAKE_ARRAY(3,3,nTot,/DOUBLE)
   GEO2MAG_vec      = MAKE_ARRAY(3,3,nTot,/DOUBLE)
   GEO2MAG_sphV     = MAKE_ARRAY(3,3,nTot,/DOUBLE)
+
+  ;;North-East-Down
+  GEO2NED_coord    = MAKE_ARRAY(3,3,nTot,/DOUBLE)
+  GEO2NED_vec      = MAKE_ARRAY(3,3,nTot,/DOUBLE)
 
   CASE 1 OF
      KEYWORD_SET(use_geopack_08): BEGIN
@@ -99,68 +113,96 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
            GEOPACK_RECALC_08,YearArr[i],MonthArr[i],DayArr[i],HourArr[i],MinArr[i],SecArr[i],/DATE 
 
            ;;do that dance
-           tmpGEOVel = [renu2.ecef.velocity.x[i],renu2.ecef.velocity.y[i],renu2.ecef.velocity.z[i]]
+           tmpPos_GEO              = [renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i]]
+           tmpVel_GEO              = [renu2.ecef.velocity.x[i],renu2.ecef.velocity.y[i],renu2.ecef.velocity.z[i]]
 
            ;;To GEI
-           GEOPACK_CONV_COORD_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                              gei_x,gei_y,gei_z, $
-                              /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
+           GEOPACK_CONV_COORD_08,tmpPos_GEO[0],tmpPos_GEO[1],tmpPos_GEO[2], $
+                                 pos_gei_x,pos_gei_y,pos_gei_z, $
+                                 /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
            ;;To MAG
-           GEOPACK_CONV_COORD_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                              mag_x,mag_y,mag_z, $
-                              /FROM_GEO,/TO_MAG,EPOCH=time_epoch[i]
+           GEOPACK_CONV_COORD_08,tmpPos_GEO[0],tmpPos_GEO[1],tmpPos_GEO[2], $
+                                 pos_mag_x,pos_mag_y,pos_mag_z, $
+                                 /FROM_GEO,/TO_MAG,EPOCH=time_epoch[i]
 
            ;;To GSM for IGRF calc
-           GEOPACK_CONV_COORD_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                                 gsm_x,gsm_y,gsm_z, $
-                              /FROM_GEO,/TO_GSW,EPOCH=time_epoch[i]
+           GEOPACK_CONV_COORD_08,tmpPos_GEO[0],tmpPos_GEO[1],tmpPos_GEO[2], $
+                                 pos_gsm_x,pos_gsm_y,pos_gsm_z, $
+                                 /FROM_GEO,/TO_GSW,EPOCH=time_epoch[i]
 
 
            ;;And spherical everything
-           GEOPACK_SPHCAR_08,gei_x,gei_y,gei_z,gei_r,gei_theta,gei_phi,/TO_SPHERE,/DEGREE
-           GEOPACK_SPHCAR_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                          geo_r,geo_theta,geo_phi,/TO_SPHERE,/DEGREE
-           ;; GEOPACK_SPHCAR_08,renu2.ecef.velocity.x[i],renu2.ecef.velocity.y[i],renu2.ecef.velocity.z[i], $
-           ;; GEOPACK_SPHCAR_08,tmpGEOVel[0],tmpGEOVel[1],tmpGEOVel[2], $
-           ;;                geoVel_r,geoVel_theta,geoVel_phi,/TO_SPHERE,/DEGREE
-           GEOPACK_BCARSP_08,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-                             renu2.ecef.velocity.x[i],renu2.ecef.velocity.y[i],renu2.ecef.velocity.z[i], $
-                             geoVel_r,geoVel_theta,geoVel_phi
-           GEOPACK_SPHCAR_08,mag_x,mag_y,mag_z,mag_r,mag_theta,mag_phi,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,pos_gei_x,pos_gei_y,pos_gei_z, $
+                             pos_gei_r,pos_gei_theta,pos_gei_phi,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,tmpPos_GEO[0],tmpPos_GEO[1],tmpPos_GEO[2], $
+                             pos_geo_r,pos_geo_theta,pos_geo_phi,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,pos_gsm_x,pos_gsm_y,pos_gsm_z, $
+                             pos_gsm_r,pos_gsm_theta,pos_gsm_phi,/TO_SPHERE,/DEGREE
+           GEOPACK_SPHCAR_08,pos_mag_x,pos_mag_y,pos_mag_z, $
+                             pos_mag_r,pos_mag_theta,pos_mag_phi,/TO_SPHERE,/DEGREE
+
+           ;;velocity vector in spherical GEO coords
+           GEOPACK_BCARSP_08,tmpPos_GEO[0],tmpPos_GEO[1],tmpPos_GEO[2], $
+                             tmpVel_GEO[0],tmpVel_GEO[1],tmpVel_GEO[2], $
+                             vel_GEO_r,vel_GEO_theta,vel_GEO_phi
 
            ;;Get IGRF
-           gsm_xyz_R_E = [gsm_x,gsm_y,gsm_z]/1000.D/R_E ;div by 1000 to get to km, then by R_E (which is in units of km) 
+           pos_gsm_xyz_R_E         = [pos_gsm_x,pos_gsm_y,pos_gsm_z]/1000.D/R_E ;div by 1000 to get to km, then by R_E (which is in units of km) 
            ;; GEOPACK_RECALC_08,YearArr[i],MonthArr[i],DayArr[i],HourArr[i],MinArr[i],SecArr[i],/DATE 
-           GEOPACK_IGRF_GEO_08,geo_r/1000./R_E,geo_theta,geo_phi,br,btheta,bphi,EPOCH=time_epoch[i],/DEGREE
-           GEOPACK_BSPCAR_08  ,geo_theta,geo_phi,br,btheta,bphi,bx,by,bz,/DEGREE ; ,EPOCH=time_epoch[i]
+           GEOPACK_IGRF_GEO_08,pos_geo_r/1000./R_E,pos_geo_theta,pos_geo_phi,br,btheta,bphi,EPOCH=time_epoch[i],/DEGREE
+           GEOPACK_BSPCAR_08  ,pos_geo_theta,pos_geo_phi,br,btheta,bphi,bx,by,bz,/DEGREE ; ,EPOCH=time_epoch[i]
 
            ;;alternate shot at IGRF
-           GEOPACK_IGRF_GSW_08,gsm_xyz_R_E[0],gsm_xyz_R_E[1],gsm_xyz_R_E[2],bx_gsm,by_gsm,bz_gsm,EPOCH=time_epoch[i] ;,/DEGREE
-           GEOPACK_BCARSP_08  ,gsm_xyz_R_E[0],gsm_xyz_R_E[1],gsm_xyz_R_E[2],bx_gsm,by_gsm,bz_gsm,bmagr,bmagtheta,bmagphi
+           GEOPACK_IGRF_GSW_08,pos_gsm_xyz_R_E[0],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2],bx_gsm,by_gsm,bz_gsm,EPOCH=time_epoch[i] ;,/DEGREE
+           GEOPACK_BCARSP_08  ,pos_gsm_xyz_R_E[0],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2],bx_gsm,by_gsm,bz_gsm,bmagr,bmagtheta,bmagphi
 
            ;;Dipole, please?
-           GEOPACK_DIP_08,gsm_xyz_R_E[1],gsm_xyz_R_E[1],gsm_xyz_R_E[2],bx_gsm_dip,by_gsm_dip,bz_gsm_dip,EPOCH=time_epoch[i] ;,/DEGREE
-
-           ;;Update spherical
-           GEISph_arr[*,i]        = [gei_theta,gei_phi,gei_r] 
-           GEOSph_arr[*,i]        = [geo_theta,geo_phi,geo_r] ;Redundant, yes, but a check
-           vel_GEOSphArr[*,i]     = [geoVel_r,geoVel_theta,geoVel_phi] ;;NOTE!!!!!
-           IGRF_GEO_sphArr[*,i]   = [btheta   ,bphi   ,br   ] 
-           IGRF_GSM_sphArr[*,i]   = [bmagtheta,bmagphi,bmagr] 
-           MAGSph_arr[*,i]        = [mag_theta,mag_phi,mag_r] 
+           GEOPACK_DIP_08,pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2],bx_gsm_dip,by_gsm_dip,bz_gsm_dip,EPOCH=time_epoch[i] ;,/DEGREE
 
            ;;Update not-spherical
-           ;; TiltArr    = [TiltArr,tempTilt]
-           GEI_arr[*,i]  = [gei_x,gei_y,gei_z]
-           GSM_arr[*,i]  = [gsm_x,gsm_y,gsm_z]
-           ;; GEO_arr[*,i]  = [geo_x,geo_y,geo_z]
-           IGRF_GEO_arr[*,i] = [bx,by,bz]
-           IGRF_GSM_arr[*,i] = [bx_gsm,by_gsm,bz_gsm]
-           IGRF_GSM_DIP_arr[*,i] = [bx_gsm_dip,by_gsm_dip,bz_gsm_dip]
-           MAG_arr[*,i]  = [mag_x,mag_y,mag_z]
+           ;; TiltArr              = [TiltArr,tempTilt]
+           pos_GEI_arr[*,i]        = [pos_gei_x,pos_gei_y,pos_gei_z]
+           pos_GSM_arr[*,i]        = [pos_gsm_x,pos_gsm_y,pos_gsm_z]
+           pos_MAG_arr[*,i]        = [pos_mag_x,pos_mag_y,pos_mag_z]
+
+           ;;Update spherical
+           pos_GEISph_arr[*,i]     = [pos_gei_theta,pos_gei_phi,pos_gei_r] 
+           pos_GEOSph_arr[*,i]     = [pos_geo_theta,pos_geo_phi,pos_geo_r] ;Redundant, yes, but a check
+           pos_GSMSph_arr[*,i]     = [pos_gsm_theta,pos_gsm_phi,pos_gsm_r] ;Redundant, yes, but a check
+           pos_MAGSph_arr[*,i]     = [pos_mag_theta,pos_mag_phi,pos_mag_r] 
+
+           vel_GEOSphArr[*,i]      = [vel_GEO_r,vel_GEO_theta,vel_GEO_phi]    ;;NOTE!!!!!
+
+           IGRF_GEO_sphArr[*,i]    = [btheta   ,bphi   ,br   ] 
+           IGRF_GSM_sphArr[*,i]    = [bmagtheta,bmagphi,bmagr] 
+
+           ;;Update IGRFs
+           IGRF_GSM_DIP_arr[*,i]   = [bx_gsm_dip,by_gsm_dip,bz_gsm_dip]
+           IGRF_GEO_arr[*,i]       = [bx,by,bz]
+           IGRF_GSM_arr[*,i]       = [bx_gsm,by_gsm,bz_gsm]
+
+           ;;Where is magnetic center of earth?
+           GEOPACK_CONV_COORD_08,0D,0D,0D, $
+                                 pos_magCenter_x_GEI,pos_magCenter_y_GEI,pos_magCenter_z_GEI, $
+                                 /FROM_MAG,/TO_GEI,EPOCH=time_epoch[i]
+           pos_magCenter_GEI       = [TEMPORARY(pos_magCenter_x_GEI),TEMPORARY(pos_magCenter_y_GEI),TEMPORARY(pos_magCenter_z_GEI)]
 
            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
            ;;Now transform matrices
+
+           ;;GEO to GEI
+           GEOPACK_CONV_COORD_08,ident[0,0],ident[0,1],ident[0,2], $
+                                 gei_x0,gei_y0,gei_z0, $
+                                 /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
+
+           GEOPACK_CONV_COORD_08,ident[1,0],ident[1,1],ident[1,2], $
+                                 gei_x1,gei_y1,gei_z1, $
+                                 /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
+
+           GEOPACK_CONV_COORD_08,ident[2,0],ident[2,1],ident[2,2], $
+                                 gei_x2,gei_y2,gei_z2, $
+                                 /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
+
            ;;GEO to MAG
            GEOPACK_CONV_COORD_08,ident[0,0],ident[0,1],ident[0,2], $
                                  mag_x0,mag_y0,mag_z0, $
@@ -175,91 +217,131 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
                                  /FROM_GEO,/TO_MAG,EPOCH=time_epoch[i]
 
 
-           GEO2MAG_coord[*,*,i]  = [[mag_x0,mag_y0,mag_z0], $
-                                    [mag_x1,mag_y1,mag_z1], $
-                                    [mag_x2,mag_y2,mag_z2]]
-           GEO2MAG_vec[*,*,i]    = INVERT(GEO2MAG_coord[*,*,i])
+           GEO2GEI_coord[*,*,i]    = [[gei_x0,gei_y0,gei_z0], $
+                                      [gei_x1,gei_y1,gei_z1], $
+                                      [gei_x2,gei_y2,gei_z2]]
+           GEO2GEI_vec[*,*,i]      = INVERT(GEO2GEI_coord[*,*,i])
 
+           GEO2MAG_coord[*,*,i]    = [[mag_x0,mag_y0,mag_z0], $
+                                      [mag_x1,mag_y1,mag_z1], $
+                                      [mag_x2,mag_y2,mag_z2]]
+           GEO2MAG_vec[*,*,i]      = INVERT(GEO2MAG_coord[*,*,i])
+
+
+           ;;North-East-Down
+           GEOPACK_CONV_COORD_08,ident[2,0],ident[2,1],ident[2,2], $
+                                 mag_x2,mag_y2,mag_z2, $
+                                 /FROM_GEO,/TO_MAG,EPOCH=time_epoch[i]
+
+           tmpLambda               = renu2.long[i]*!DTOR
+           tmpPhi                  = renu2.lat[i]*!DTOR
+
+
+           ;; GEOPACK_GEODGEO_08,0.D,tmpPhi,refAlt_GEO,refTheta_GEO,(KEYWORD_SET(GEOD_TO_GEO) ? 1 : -1) ;see GEOPACK_2008 documentation
+           GEOPACK_GEODGEO_08,0.D,tmpPhi,refAlt_GEO,refTheta_GEO,/TO_GEOCENTRIC ;/TO_GEODETIC (see GEOPACK_2008 documentation, or type GEOPACK_HELP)
+           GEOPACK_SPHCAR_08,refAlt_GEO,refTheta_GEO,tmpLambda,refAlt_x,refAlt_y,refAlt_z,/TO_RECT
+
+           tmpGEODRef              = [refAlt_x,refAlt_y,refAlt_z]
+           tmpNEDPos               = [tmpPos_GEO[0]-tmpGEODRef[0],tmpPos_GEO[1]-tmpGEODRef[1],tmpPos_GEO[2]-tmpGEODRef[2]]
+
+           GEO2NED_coord[*,*,i]    = [[-SIN(tmpPhi)*COS(tmpLambda),-SIN(tmpPhi)*SIN(tmpLambda),COS(tmpPhi)], $
+                                      [-SIN(tmpLambda)            ,COS(tmpLambda)             ,0.D         ], $
+                                      [-COS(tmpPhi)*COS(tmpLambda),-COS(tmpPhi)*SIN(tmpLambda),-SIN(tmpPhi)]]
+           GEO2NED_vec[*,*,i]      = INVERT(GEO2NED_coord[*,*,i])
+
+           pos_NEDArr[*,i]         = GEO2NED_coord[*,*,i] # tmpNEDPos
+           vel_NEDArr[*,i]         = GEO2NED_vec[*,*,i]   # tmpVel_GEO
 
            ;;Convert Cartesian vector transform matrices to spherical vector transform matrices
-
-           GEOPACK_BCARSP_08,mag_x0,mag_y0,mag_z0, $
-           ;; GEOPACK_BCARSP_08,ident[0,0],ident[0,1],ident[0,2], $
+           ;; GEOPACK_BCARSP_08,mag_x0,mag_y0,mag_z0, $
+           GEOPACK_BCARSP_08,pos_mag_x,pos_mag_y,pos_mag_z, $
+                             ;; GEOPACK_BCARSP_08,ident[0,0],ident[0,1],ident[0,2], $
                              ;; GEO2MAG_vec[0,0,i],GEO2MAG_vec[0,1,i],GEO2MAG_vec[0,2,i], $
                              ident[0,0],ident[0,1],ident[0,2], $
                              magVSph_r0,magVSph_theta0,magVSph_phi0
-           GEOPACK_BCARSP_08,mag_x1,mag_y1,mag_z1, $
-           ;; GEOPACK_BCARSP_08,ident[1,0],ident[1,1],ident[1,2], $
+           ;; GEOPACK_BCARSP_08,mag_x1,mag_y1,mag_z1, $
+           GEOPACK_BCARSP_08,pos_mag_x,pos_mag_y,pos_mag_z, $
+                             ;; GEOPACK_BCARSP_08,ident[1,0],ident[1,1],ident[1,2], $
                              ;; GEO2MAG_vec[1,0,i],GEO2MAG_vec[1,1,i],GEO2MAG_vec[1,2,i], $
                              ident[1,0],ident[1,1],ident[1,2], $
                              magVSph_r1,magVSph_theta1,magVSph_phi1
-           GEOPACK_BCARSP_08,mag_x2,mag_y2,mag_z2, $
-           ;; GEOPACK_BCARSP_08,ident[2,0],ident[2,1],ident[2,2], $
+           ;; GEOPACK_BCARSP_08,mag_x2,mag_y2,mag_z2, $
+           GEOPACK_BCARSP_08,pos_mag_x,pos_mag_y,pos_mag_z, $
+                             ;; GEOPACK_BCARSP_08,ident[2,0],ident[2,1],ident[2,2], $
                              ;; GEO2MAG_vec[2,0,i],GEO2MAG_vec[2,1,i],GEO2MAG_vec[2,2,i], $
                              ident[2,0],ident[2,1],ident[2,2], $
                              magVSph_r2,magVSph_theta2,magVSph_phi2
 
-           GEO2MAG_sphV[*,*,i]   = [[magVSph_r0,magVSph_theta0,magVSph_phi0], $
-                                    [magVSph_r1,magVSph_theta1,magVSph_phi1], $
-                                    [magVSph_r2,magVSph_theta2,magVSph_phi2]]
+           GEO2MAG_sphV[*,*,i]     = [[magVSph_r0,magVSph_theta0,magVSph_phi0], $
+                                      [magVSph_r1,magVSph_theta1,magVSph_phi1], $
+                                      [magVSph_r2,magVSph_theta2,magVSph_phi2]]
+           
+           
 
            ;;Now update spherical coordinate transform matrices
            GEOPACK_SPHCAR_08,mag_x0,mag_y0,mag_z0,mag_r0,mag_theta0,mag_phi0,/TO_SPHERE,/DEGREE
            GEOPACK_SPHCAR_08,mag_x1,mag_y1,mag_z1,mag_r1,mag_theta1,mag_phi1,/TO_SPHERE,/DEGREE
            GEOPACK_SPHCAR_08,mag_x2,mag_y2,mag_z2,mag_r2,mag_theta2,mag_phi2,/TO_SPHERE,/DEGREE
 
-           GEO2MAG_sphC[*,*,i]  = [[mag_r0,mag_theta0,mag_phi0], $
-                                   [mag_r1,mag_theta1,mag_phi1], $
-                                   [mag_r2,mag_theta2,mag_phi2]]
+           GEO2MAG_sphC[*,*,i]     = [[mag_r0,mag_theta0,mag_phi0], $
+                                      [mag_r1,mag_theta1,mag_phi1], $
+                                      [mag_r2,mag_theta2,mag_phi2]]
 
 
            ;;get Cartesian and spherical velocity in MAG coordinates
-           vel_MAGArr[*,i]       = GEO2MAG_vec[*,*,i] # tmpGEOVel
-           vel_MAGSphArr[*,i]    = GEO2MAG_sphV[*,*,i] # vel_GEOSphArr[*,i]
+           vel_MAGArr[*,i]         = GEO2MAG_vec[*,*,i] # tmpVel_GEO
+           ;; vel_MAGSphArr[*,i]   = GEO2MAG_sphV[*,*,i] # vel_GEOSphArr[*,i]
+           ;; vel_MAGSphArr[*,i]   = GEO2MAG_sphV[*,*,i] # vel_MAGArr[*,i]
+
+           
+           GEOPACK_BCARSP_08,pos_mag_x,pos_mag_y,pos_mag_z, $
+                             vel_MAGArr[0,i],vel_MAGArr[1,i],vel_MAGArr[2,i], $
+                             magVSph_r,magVSph_theta,magVSph_phi
+           vel_MAGSphArr[*,i]      = [magVSph_r,magVSph_theta,magVSph_phi]
 
            ;;... And, a TEST. These should come out the same:
-           GEOPACK_BSPCAR_08  ,mag_theta,mag_phi, $
+           GEOPACK_BSPCAR_08  ,pos_mag_theta,pos_mag_phi, $
                                vel_MAGSphArr[0,i],vel_MAGSphArr[1,i],vel_MAGSphArr[2,i], $
                                testVelx_MAG,testVely_MAG,testVelz_MAG,/DEGREE ; ,EPOCH=time_epoch[i]
-           GEOPACK_BCARSP_08  ,gsm_xyz_R_E[0],gsm_xyz_R_E[1],gsm_xyz_R_E[2], $
+           GEOPACK_BCARSP_08  ,pos_gsm_xyz_R_E[0],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2], $
                                vel_MAGArr[0,i],vel_MAGArr[1,i],vel_MAGArr[2,i], $
                                testVelr_MAG,testVeltheta_MAG,testVelphi_MAG
 
 
-           velMagCar_GEO    = SQRT(renu2.ecef.velocity.x[i]*renu2.ecef.velocity.x[i] + $
-                                   renu2.ecef.velocity.y[i]*renu2.ecef.velocity.y[i] + $
-                                   renu2.ecef.velocity.z[i]*renu2.ecef.velocity.z[i])
-           velMagSph_GEO    = SQRT(geoVel_r*geoVel_r + $
-                                   geoVel_theta*geoVel_theta + $
-                                   geoVel_phi*geoVel_phi)
+           velMagCar_GEO           = SQRT(tmpVel_GEO[0]*tmpVel_GEO[0] + $
+                                          tmpVel_GEO[1]*tmpVel_GEO[1] + $
+                                          tmpVel_GEO[2]*tmpVel_GEO[2])
+           velMagSph_GEO           = SQRT(vel_GEO_r*vel_GEO_r + $
+                                          vel_GEO_theta*vel_GEO_theta + $
+                                          vel_GEO_phi*vel_GEO_phi)
 
            ;; IF ABS(velMagCar_GEO-velMagSph_GEO) GT 0.0001 THEN STOP ;Precision to the fourth decimal place. This will make it quit.
            IF ABS(velMagCar_GEO-velMagSph_GEO) GT 0.001 THEN STOP
            
-           conv_velMagSph_MAG    = SQRT(vel_MAGSphArr[0,i]*vel_MAGSphArr[0,i] + $
-                                        vel_MAGSphArr[1,i]*vel_MAGSphArr[1,i] + $
-                                        vel_MAGSphArr[2,i]*vel_MAGSphArr[2,i])
+           conv_velMagSph_MAG      = SQRT(vel_MAGSphArr[0,i]*vel_MAGSphArr[0,i] + $
+                                          vel_MAGSphArr[1,i]*vel_MAGSphArr[1,i] + $
+                                          vel_MAGSphArr[2,i]*vel_MAGSphArr[2,i])
            
-           conv_velMagCar_MAG    = SQRT(vel_MAGArr[0,i]*vel_MAGArr[0,i] + $
-                                        vel_MAGArr[1,i]*vel_MAGArr[1,i] + $
-                                        vel_MAGArr[2,i]*vel_MAGArr[2,i])
+           conv_velMagCar_MAG      = SQRT(vel_MAGArr[0,i]*vel_MAGArr[0,i] + $
+                                          vel_MAGArr[1,i]*vel_MAGArr[1,i] + $
+                                          vel_MAGArr[2,i]*vel_MAGArr[2,i])
 
            IF ABS(velMagCar_GEO-conv_velMagCar_MAG) GT 0.001 THEN STOP
            IF ABS(velMagSph_GEO-conv_velMagSph_MAG) GT 0.001 THEN STOP
            
-           convConv_velMagSph_MAG = SQRT(testVelr_MAG*testVelr_MAG + $
-                                         testVeltheta_MAG*testVeltheta_MAG + $
-                                         testVelphi_MAG*testVelphi_MAG)
+           convConv_velMagSph_MAG  = SQRT(testVelr_MAG*testVelr_MAG + $
+                                          testVeltheta_MAG*testVeltheta_MAG + $
+                                          testVelphi_MAG*testVelphi_MAG)
            
-           convConv_velMagCar_MAG = SQRT(testVelx_MAG*testVelx_MAG + $
-                                         testVely_MAG*testVely_MAG + $
-                                         testVelz_MAG*testVelz_MAG)
+           convConv_velMagCar_MAG  = SQRT(testVelx_MAG*testVelx_MAG + $
+                                          testVely_MAG*testVely_MAG + $
+                                          testVelz_MAG*testVelz_MAG)
            
-           velMagnitudeDiff      = conv_velMagSph_MAG-conv_velMagCar_MAG
-           velSphMagnitudeDiff   = conv_velMagSph_MAG-convConv_velMagSph_MAG
-           velCarMagnitudeDiff   = conv_velMagCar_MAG-convConv_velMagCar_MAG
+           velMagnitudeDiff        = conv_velMagSph_MAG-conv_velMagCar_MAG
+           velSphMagnitudeDiff     = conv_velMagSph_MAG-convConv_velMagSph_MAG
+           velCarMagnitudeDiff     = conv_velMagCar_MAG-convConv_velMagCar_MAG
 
-           ;; IF (ABS(velCarMagnitudeDiff) GT 1) OR (ABS(velSphMagnitudeDiff) GT 1) OR (ABS(velMagnitudeDiff) GT 1) THEN STOP
+           IF (ABS(velCarMagnitudeDiff) GT 1) OR (ABS(velSphMagnitudeDiff) GT 1) OR (ABS(velMagnitudeDiff) GT 1) THEN STOP
 
            IF (i MOD 100) EQ 0 THEN PRINT,i
         ENDFOR
@@ -271,40 +353,40 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
         ;;    ;;do that dance
 
         ;;    ;;To GEI
-        ;;    GEOPACK_CONV_COORD,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-        ;;                       gei_x,gei_y,gei_z, $
+        ;;    GEOPACK_CONV_COORD,tmpPos_GEO[0],tmpPos_GEO[1],tmpPos_GEO[2], $
+        ;;                       pos_gei_x,pos_gei_y,pos_gei_z, $
         ;;                       /FROM_GEO,/TO_GEI,EPOCH=time_epoch[i]
         ;;    ;;To MAG
-        ;;    GEOPACK_CONV_COORD,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-        ;;                       mag_x,mag_y,mag_z, $
+        ;;    GEOPACK_CONV_COORD,tmpPos_GEO[0],tmpPos_GEO[1],tmpPos_GEO[2], $
+        ;;                       pos_mag_x,pos_mag_y,pos_mag_z, $
         ;;                       /FROM_GEO,/TO_MAG,EPOCH=time_epoch[i]
 
 
         ;;    ;;And spherical everything
-        ;;    GEOPACK_SPHCAR,gei_x,gei_y,gei_z,gei_r,gei_theta,gei_phi,/TO_SPHERE,/DEGREE
-        ;;    GEOPACK_SPHCAR,renu2.ecef.position.x[i],renu2.ecef.position.y[i],renu2.ecef.position.z[i], $
-        ;;                   geo_r,geo_theta,geo_phi,/TO_SPHERE,/DEGREE
-        ;;    GEOPACK_SPHCAR,renu2.ecef.velocity.x[i],renu2.ecef.velocity.y[i],renu2.ecef.velocity.z[i], $
-        ;;                   geoVel_r,geoVel_theta,geoVel_phi,/TO_SPHERE,/DEGREE
-        ;;    GEOPACK_SPHCAR,mag_x,mag_y,mag_z,mag_r,mag_theta,mag_phi,/TO_SPHERE,/DEGREE
+        ;;    GEOPACK_SPHCAR,pos_gei_x,pos_gei_y,pos_gei_z,pos_gei_r,pos_gei_theta,pos_gei_phi,/TO_SPHERE,/DEGREE
+        ;;    GEOPACK_SPHCAR,tmpPos_GEO[0],tmpPos_GEO[1],tmpPos_GEO[2], $
+        ;;                   pos_geo_r,pos_geo_theta,pos_geo_phi,/TO_SPHERE,/DEGREE
+        ;;    GEOPACK_SPHCAR,tmpVel_GEO[0],renu2.ecef.velocity.y[i],tmpVel_GEO[2], $
+        ;;                   vel_GEO_r,vel_GEO_theta,vel_GEO_phi,/TO_SPHERE,/DEGREE
+        ;;    GEOPACK_SPHCAR,pos_mag_x,pos_mag_y,pos_mag_z,pos_mag_r,pos_mag_theta,pos_mag_phi,/TO_SPHERE,/DEGREE
 
         ;;    ;;Get IGRF
-        ;;    GEOPACK_IGRF_GEO,geo_r/R_E/1000.D,geo_theta,geo_phi,br,btheta,bphi,/DEGREE,EPOCH=time_epoch[i]
-        ;;    GEOPACK_BSPCAR  ,geo_theta,geo_phi,br,btheta,bphi,bx,by,bz,/DEGREE ; ,EPOCH=time_epoch[i]
+        ;;    GEOPACK_IGRF_GEO,pos_geo_r/R_E/1000.D,pos_geo_theta,pos_geo_phi,br,btheta,bphi,/DEGREE,EPOCH=time_epoch[i]
+        ;;    GEOPACK_BSPCAR  ,pos_geo_theta,pos_geo_phi,br,btheta,bphi,bx,by,bz,/DEGREE ; ,EPOCH=time_epoch[i]
 
         ;;    ;;Update spherical
-        ;;    GEISph_arr[*,i]    = [gei_theta,gei_phi,gei_r] 
-        ;;    GEOSph_arr[*,i]    = [geo_theta,geo_phi,geo_r] ;Redundant, yes, but a check
-        ;;    vel_GEOSphArr[*,i] = [geoVel_theta,geoVel_phi,geoVel_r]
+        ;;    pos_GEISph_arr[*,i]    = [pos_gei_theta,pos_gei_phi,pos_gei_r] 
+        ;;    pos_GEOSph_arr[*,i]    = [pos_geo_theta,pos_geo_phi,pos_geo_r] ;Redundant, yes, but a check
+        ;;    vel_GEOSphArr[*,i]     = [vel_GEO_theta,vel_GEO_phi,vel_GEO_r]
         ;;    IGRF_GEO_sphArr[*,i]   = [btheta,bphi,br] 
-        ;;    MAGSph_arr[*,i]    = [mag_theta,mag_phi,mag_r] 
+        ;;    pos_MAGSph_arr[*,i]    = [pos_mag_theta,pos_mag_phi,pos_mag_r] 
 
         ;;    ;;Update not-spherical
         ;;    ;; TiltArr    = [TiltArr,tempTilt]
-        ;;    GEI_arr[*,i]  = [gei_x,gei_y,gei_z]
+        ;;    pos_GEI_arr[*,i]  = [pos_gei_x,pos_gei_y,pos_gei_z]
         ;;    ;; GEO_arr[*,i]  = [geo_x,geo_y,geo_z]
         ;;    IGRF_GEO_arr[*,i] = [bx,by,bz]
-        ;;    MAG_arr[*,i]  = [mag_x,mag_y,mag_z]
+        ;;    pos_MAG_arr[*,i]  = [pos_mag_x,pos_mag_y,pos_mag_z]
 
         ;;    IF (i MOD 100) EQ 0 THEN PRINT,i
         ;; ENDFOR
@@ -314,86 +396,82 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
 
   ;;Lat, long, height
   GEISph_arr2   = [ $
-                  [90.-REFORM(GEISph_arr[0,*])], $
-                  [REFORM(GEISph_arr[1,*])], $
-                  [REFORM(GEISph_arr[2,*])-R_E] $ ;Convert to latitude from colatitude here
+                  [90.-REFORM(pos_GEISph_arr[0,*])], $
+                  [REFORM(pos_GEISph_arr[1,*])], $
+                  [REFORM(pos_GEISph_arr[2,*])-R_E] $ ;Convert to latitude from colatitude here
                   ]
 
   GEOSph_arr2   = [ $
-                  [90.-REFORM(GEOSph_arr[0,*])], $
-                  [REFORM(GEOSph_arr[1,*])], $
-                  [REFORM(GEOSph_arr[2,*])-R_E] $ ;Convert to latitude from colatitude here
+                  [90.-REFORM(pos_GEOSph_arr[0,*])], $
+                  [REFORM(pos_GEOSph_arr[1,*])], $
+                  [REFORM(pos_GEOSph_arr[2,*])-R_E] $ ;Convert to latitude from colatitude here
                   ]   
 
   MAGSph_arr2   = [ $
-                  [90.-REFORM(MAGSph_arr[0,*])], $
-                  [REFORM(MAGSph_arr[1,*])], $
-                  [REFORM(MAGSph_arr[2,*])-R_E] $ ;Convert to latitude from colatitude here
+                  [90.-REFORM(pos_MAGSph_arr[0,*])], $
+                  [REFORM(pos_MAGSph_arr[1,*])], $
+                  [REFORM(pos_MAGSph_arr[2,*])-R_E] $ ;Convert to latitude from colatitude here
                   ]   
   
   DIPOLE  = {gsm : {car : {x   : REFORM(IGRF_GSM_DIP_arr[0,*]), $
                            y   : REFORM(IGRF_GSM_DIP_arr[1,*]), $
                            z   : REFORM(IGRF_GSM_DIP_arr[2,*])}}}
 
-  IGRF    = {geo : {sph : {bTheta : REFORM(IGRF_GEO_sphArr[0,*]), $
-                           bPhi   : REFORM(IGRF_GEO_sphArr[1,*]), $
-                           br     : REFORM(IGRF_GEO_sphArr[2,*])}, $
-                    car : {x      : REFORM(IGRF_GEO_arr[0,*]), $
+  IGRF    = {GEO : {car : {x      : REFORM(IGRF_GEO_arr[0,*]), $
                            y      : REFORM(IGRF_GEO_arr[1,*]), $
-                           z      : REFORM(IGRF_GEO_arr[2,*])}}, $
-             gsm : {sph : {bTheta : REFORM(IGRF_GSM_sphArr[0,*]), $
-                           bPhi   : REFORM(IGRF_GSM_sphArr[1,*]), $
-                           br     : REFORM(IGRF_GSM_sphArr[2,*])}, $
-                    car : {x      : REFORM(IGRF_GSM_arr[0,*]), $
+                           z      : REFORM(IGRF_GEO_arr[2,*])}, $
+                    sph : {bTheta : REFORM(IGRF_GEO_sphArr[0,*]), $
+                           bPhi   : REFORM(IGRF_GEO_sphArr[1,*]), $
+                           br     : REFORM(IGRF_GEO_sphArr[2,*])}}, $
+             GSM : {car : {x      : REFORM(IGRF_GSM_arr[0,*]), $
                            y      : REFORM(IGRF_GSM_arr[1,*]), $
-                           z      : REFORM(IGRF_GSM_arr[2,*])}}}
+                           z      : REFORM(IGRF_GSM_arr[2,*])}, $
+                    sph : {bTheta : REFORM(IGRF_GSM_sphArr[0,*]), $
+                           bPhi   : REFORM(IGRF_GSM_sphArr[1,*]), $
+                           br     : REFORM(IGRF_GSM_sphArr[2,*])}}}
   
-  GEI     = {ALT:GEISph_arr2[*,2], $
-             LON:GEISph_arr2[*,1], $
-             LAT:GEISph_arr2[*,0], $
-             sph : {theta : REFORM(GEISph_arr[0,*]), $
-                    phi   : REFORM(GEISph_arr[1,*]), $
-                    r     : REFORM(GEISph_arr[2,*])}, $
-             car : {x     : REFORM(GEI_arr[0,*]), $
-                    y     : REFORM(GEI_arr[1,*]), $
-                    z     : REFORM(GEI_arr[2,*])}}
-
-
-  ;; vel     = {GEO : {sph : {theta : REFORM(vel_GEOSphArr[0,*]), $
-  ;;                          phi   : REFORM(vel_GEOSphArr[1,*]), $
-  ;;                          r     : REFORM(vel_GEOSphArr[2,*])}, $
-  vel     = {GEO : {sph : {theta : REFORM(vel_GEOSphArr[1,*]), $
-                           phi   : REFORM(vel_GEOSphArr[2,*]), $
-                           r     : REFORM(vel_GEOSphArr[0,*])}, $
-                    car : {x     : renu2.ecef.velocity.x, $
-                           y     : renu2.ecef.velocity.y, $
-                           z     : renu2.ecef.velocity.z}}, $
-             MAG : {sph : {theta : REFORM(vel_MAGSphArr[0,*]), $
-                           phi   : REFORM(vel_MAGSphArr[1,*]), $
-                           r     : REFORM(vel_MAGSphArr[2,*])}, $
-                    car : {x     : REFORM(vel_MAGArr[0,*]), $
-                           y     : REFORM(vel_MAGArr[1,*]), $
-                           z     : REFORM(vel_MAGArr[2,*])}}}
-
-
-  pos      = {GEO : {ALT:GEOSph_arr2[*,2], $
-                     LON:GEOSph_arr2[*,1], $
-                     LAT:GEOSph_arr2[*,0], $
-                     sph : {theta : REFORM(GEOSph_arr[0,*]), $
-                            phi   : REFORM(GEOSph_arr[1,*]), $
-                            r     : REFORM(GEOSph_arr[2,*])}, $
+  ;;Position struct
+  pos      = {GEI : {car : {x     : REFORM(pos_GEI_arr[0,*]), $
+                            y     : REFORM(pos_GEI_arr[1,*]), $
+                            z     : REFORM(pos_GEI_arr[2,*])}, $
+                     sph : {theta : REFORM(pos_GEISph_arr[0,*]), $
+                            phi   : REFORM(pos_GEISph_arr[1,*]), $
+                            r     : REFORM(pos_GEISph_arr[2,*])}}, $
+              GEO : {ALT : renu2.alt, $
+                     LON : renu2.long, $
+                     LAT : renu2.lat, $
                      car : {x     : renu2.ecef.position.x, $
                             y     : renu2.ecef.position.y, $
-                            z     : renu2.ecef.position.z}}, $
-              MAG : {ALT:MAGSph_arr2[*,2], $
-                     LON:MAGSph_arr2[*,1], $
-                     LAT:MAGSph_arr2[*,0], $
-                     sph : {theta : REFORM(MAGSph_arr[0,*]), $
-                            phi   : REFORM(MAGSph_arr[1,*]), $
-                            r     : REFORM(MAGSph_arr[2,*])}, $
-                     car : {x     : REFORM(MAG_arr[0,*]), $
-                            y     : REFORM(MAG_arr[1,*]), $
-                            z     : REFORM(MAG_arr[2,*])}}}
+                            z     : renu2.ecef.position.z}, $
+                     sph : {theta : REFORM(pos_GEOSph_arr[0,*]), $
+                            phi   : REFORM(pos_GEOSph_arr[1,*]), $
+                            r     : REFORM(pos_GEOSph_arr[2,*])}}, $
+              GSM : {car : {x     : REFORM(pos_GSM_arr[0,*]), $
+                            y     : REFORM(pos_GSM_arr[1,*]), $
+                            z     : REFORM(pos_GSM_arr[2,*])}}, $
+              MAG : {ALT : MAGSph_arr2[*,2], $
+                     LON : MAGSph_arr2[*,1], $
+                     LAT : MAGSph_arr2[*,0], $
+                     car : {x     : REFORM(pos_MAG_arr[0,*]), $
+                            y     : REFORM(pos_MAG_arr[1,*]), $
+                            z     : REFORM(pos_MAG_arr[2,*])}, $
+                     sph : {theta : REFORM(pos_MAGSph_arr[0,*]), $
+                            phi   : REFORM(pos_MAGSph_arr[1,*]), $
+                            r     : REFORM(pos_MAGSph_arr[2,*])}}}
+
+  ;;Velocity struct
+  vel     = {GEO : {car : {x     : renu2.ecef.velocity.x, $
+                           y     : renu2.ecef.velocity.y, $
+                           z     : renu2.ecef.velocity.z}, $
+                    sph : {theta : REFORM(vel_GEOSphArr[1,*]), $
+                           phi   : REFORM(vel_GEOSphArr[2,*]), $
+                           r     : REFORM(vel_GEOSphArr[0,*])}}, $
+             MAG : {car : {x     : REFORM(vel_MAGArr[0,*]), $
+                           y     : REFORM(vel_MAGArr[1,*]), $
+                           z     : REFORM(vel_MAGArr[2,*])}, $
+                    sph : {theta : REFORM(vel_MAGSphArr[0,*]), $
+                           phi   : REFORM(vel_MAGSphArr[1,*]), $
+                           r     : REFORM(vel_MAGSphArr[2,*])}}}
 
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -405,12 +483,12 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
   ;;                CREATED : GET_TODAY_STRING(/DO_YYYYMMDD_FMT), $
   ;;                ORIGINATING_ROUTINE: orig_routineName}
   coords = {pos     : pos, $
-                 vel     : vel, $
-                 ;; MAG     : MAG, $
-                 IGRF    : IGRF, $
-                 DIPOLE  : DIPOLE, $
-                 CREATED : GET_TODAY_STRING(/DO_YYYYMMDD_FMT), $
-                 ORIGINATING_ROUTINE: orig_routineName}
+            vel     : vel, $
+            ;; MAG     : MAG, $
+            IGRF    : IGRF, $
+            DIPOLE  : DIPOLE, $
+            CREATED : GET_TODAY_STRING(/DO_YYYYMMDD_FMT), $
+            ORIGINATING_ROUTINE: orig_routineName}
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;Save it
@@ -444,7 +522,7 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
 
   STOP
 
-  plots             = PLOT(renu2.time.flight,geosph_arr2[*,2],XTITLE='Time (s)',YTITLE='Alt (km)')
+  plots             = PLOT(renu2.time.flight,GEOSph_arr2[*,2],XTITLE='Time (s)',YTITLE='Alt (km)')
   CGHISTOPLOT,90.-geosph_arr[0,*]
   CGHISTOPLOT,geosph_arr[1,*]
   CGHISTOPLOT,90.-magsph_arr[0,*]
