@@ -84,6 +84,7 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
   vel_MAGSphArr    = MAKE_ARRAY(3,nTot,/DOUBLE)
   vel_NEDArr       = MAKE_ARRAY(3,nTot,/DOUBLE)
 
+  IGRF_GEI_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
   IGRF_GEO_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
   IGRF_GEO_sphArr  = MAKE_ARRAY(3,nTot,/FLOAT)
   IGRF_GSM_arr     = MAKE_ARRAY(3,nTot,/FLOAT)
@@ -149,15 +150,23 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
            ;;Get IGRF
            pos_gsm_xyz_R_E         = [pos_gsm_x,pos_gsm_y,pos_gsm_z]/1000.D/R_E ;div by 1000 to get to km, then by R_E (which is in units of km) 
            ;; GEOPACK_RECALC_08,YearArr[i],MonthArr[i],DayArr[i],HourArr[i],MinArr[i],SecArr[i],/DATE 
-           GEOPACK_IGRF_GEO_08,pos_geo_r/1000./R_E,pos_geo_theta,pos_geo_phi,br,btheta,bphi,EPOCH=time_epoch[i],/DEGREE
-           GEOPACK_BSPCAR_08  ,pos_geo_theta,pos_geo_phi,br,btheta,bphi,bx,by,bz,/DEGREE ; ,EPOCH=time_epoch[i]
+           GEOPACK_IGRF_GEO_08,pos_geo_r/1000./R_E,pos_geo_theta,pos_geo_phi, $
+                               br_GEO,btheta_GEO,bphi_GEO, $
+                               EPOCH=time_epoch[i],/DEGREE
+           GEOPACK_BSPCAR_08  ,pos_geo_theta,pos_geo_phi, $
+                               br_GEO,btheta_GEO,bphi_GEO, $
+                               bx_GEO,by_GEO,bz_GEO,/DEGREE ; ,EPOCH=time_epoch[i]
 
            ;;alternate shot at IGRF
-           GEOPACK_IGRF_GSW_08,pos_gsm_xyz_R_E[0],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2],bx_gsm,by_gsm,bz_gsm,EPOCH=time_epoch[i] ;,/DEGREE
-           GEOPACK_BCARSP_08  ,pos_gsm_xyz_R_E[0],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2],bx_gsm,by_gsm,bz_gsm,bmagr,bmagtheta,bmagphi
+           GEOPACK_IGRF_GSW_08,pos_gsm_xyz_R_E[0],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2], $
+                               bx_GSM,by_GSM,bz_GSM, $
+                               EPOCH=time_epoch[i]
+           GEOPACK_BCARSP_08  ,pos_gsm_xyz_R_E[0],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2], $
+                               bx_GSM,by_GSM,bz_GSM, $
+                               br_GSM,btheta_GSM,bphi_GSM
 
            ;;Dipole, please?
-           GEOPACK_DIP_08,pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2],bx_gsm_dip,by_gsm_dip,bz_gsm_dip,EPOCH=time_epoch[i] ;,/DEGREE
+           GEOPACK_DIP_08,pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[1],pos_gsm_xyz_R_E[2],bx_GSM_dip,by_GSM_dip,bz_GSM_dip,EPOCH=time_epoch[i] ;,/DEGREE
 
            ;;Update not-spherical
            ;; TiltArr              = [TiltArr,tempTilt]
@@ -168,18 +177,18 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
            ;;Update spherical
            pos_GEISph_arr[*,i]     = [pos_gei_theta,pos_gei_phi,pos_gei_r] 
            pos_GEOSph_arr[*,i]     = [pos_geo_theta,pos_geo_phi,pos_geo_r] ;Redundant, yes, but a check
-           pos_GSMSph_arr[*,i]     = [pos_gsm_theta,pos_gsm_phi,pos_gsm_r] ;Redundant, yes, but a check
+           pos_GSMSph_arr[*,i]     = [pos_gsm_theta,pos_gsm_phi,pos_gsm_r]
            pos_MAGSph_arr[*,i]     = [pos_mag_theta,pos_mag_phi,pos_mag_r] 
 
-           vel_GEOSphArr[*,i]      = [vel_GEO_r,vel_GEO_theta,vel_GEO_phi]    ;;NOTE!!!!!
+           vel_GEOSphArr[*,i]      = [vel_GEO_r,vel_GEO_theta,vel_GEO_phi]
 
-           IGRF_GEO_sphArr[*,i]    = [btheta   ,bphi   ,br   ] 
-           IGRF_GSM_sphArr[*,i]    = [bmagtheta,bmagphi,bmagr] 
+           IGRF_GEO_sphArr[*,i]    = [btheta_GEO,bphi_GEO,br_GEO] 
+           IGRF_GSM_sphArr[*,i]    = [btheta_GSM,bphi_GSM,br_GSM] 
 
            ;;Update IGRFs
-           IGRF_GSM_DIP_arr[*,i]   = [bx_gsm_dip,by_gsm_dip,bz_gsm_dip]
-           IGRF_GEO_arr[*,i]       = [bx,by,bz]
-           IGRF_GSM_arr[*,i]       = [bx_gsm,by_gsm,bz_gsm]
+           IGRF_GSM_DIP_arr[*,i]   = [bx_GSM_dip,by_GSM_dip,bz_GSM_dip]
+           IGRF_GEO_arr[*,i]       = [bx_GEO,by_GEO,bz_GEO]
+           IGRF_GSM_arr[*,i]       = [bx_GSM,by_GSM,bz_GSM]
 
            ;;Where is magnetic center of earth?
            GEOPACK_CONV_COORD_08,0D,0D,0D, $
@@ -371,21 +380,21 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
         ;;    GEOPACK_SPHCAR,pos_mag_x,pos_mag_y,pos_mag_z,pos_mag_r,pos_mag_theta,pos_mag_phi,/TO_SPHERE,/DEGREE
 
         ;;    ;;Get IGRF
-        ;;    GEOPACK_IGRF_GEO,pos_geo_r/R_E/1000.D,pos_geo_theta,pos_geo_phi,br,btheta,bphi,/DEGREE,EPOCH=time_epoch[i]
-        ;;    GEOPACK_BSPCAR  ,pos_geo_theta,pos_geo_phi,br,btheta,bphi,bx,by,bz,/DEGREE ; ,EPOCH=time_epoch[i]
+        ;;    GEOPACK_IGRF_GEO,pos_geo_r/R_E/1000.D,pos_geo_theta,pos_geo_phi,br_GEO,btheta_GEO,bphi_GEO,/DEGREE,EPOCH=time_epoch[i]
+        ;;    GEOPACK_BSPCAR  ,pos_geo_theta,pos_geo_phi,br_GEO,btheta_GEO,bphi_GEO,bx_GEO,by_GEO,bz_GEO,/DEGREE ; ,EPOCH=time_epoch[i]
 
         ;;    ;;Update spherical
         ;;    pos_GEISph_arr[*,i]    = [pos_gei_theta,pos_gei_phi,pos_gei_r] 
         ;;    pos_GEOSph_arr[*,i]    = [pos_geo_theta,pos_geo_phi,pos_geo_r] ;Redundant, yes, but a check
         ;;    vel_GEOSphArr[*,i]     = [vel_GEO_theta,vel_GEO_phi,vel_GEO_r]
-        ;;    IGRF_GEO_sphArr[*,i]   = [btheta,bphi,br] 
+        ;;    IGRF_GEO_sphArr[*,i]   = [btheta_GEO,bphi_GEO,br_GEO] 
         ;;    pos_MAGSph_arr[*,i]    = [pos_mag_theta,pos_mag_phi,pos_mag_r] 
 
         ;;    ;;Update not-spherical
         ;;    ;; TiltArr    = [TiltArr,tempTilt]
         ;;    pos_GEI_arr[*,i]  = [pos_gei_x,pos_gei_y,pos_gei_z]
         ;;    ;; GEO_arr[*,i]  = [geo_x,geo_y,geo_z]
-        ;;    IGRF_GEO_arr[*,i] = [bx,by,bz]
+        ;;    IGRF_GEO_arr[*,i] = [bx_GEO,by_GEO,bz_GEO]
         ;;    pos_MAG_arr[*,i]  = [pos_mag_x,pos_mag_y,pos_mag_z]
 
         ;;    IF (i MOD 100) EQ 0 THEN PRINT,i
