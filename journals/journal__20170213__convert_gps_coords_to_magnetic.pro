@@ -16,16 +16,16 @@
 FUNCTION DOTP,v1,v2
   RETURN,(TRANSPOSE(v1) # v2)[0]
 END
-FUNCTION CROSSP_NORMED,v1,v2
-  tmp = CROSSP(v1,v2)
-  RETURN,VNORMALIZE(tmp)
-END
 FUNCTION VECNORM,vec
   RETURN,(SQRT(TRANSPOSE(vec) # vec))[0]
 END
 FUNCTION VNORMALIZE,vec
   ;; RETURN,[vec[0],vec[1],vec[2]]/SQRT(vec[0]*vec[0]+vec[1]*vec[1]+vec[2]*vec[2])
   RETURN,([vec[0],vec[1],vec[2]]/VECNORM(vec))
+END
+FUNCTION CROSSP_NORMED,v1,v2
+  tmp = CROSSP(v1,v2)
+  RETURN,VNORMALIZE(tmp)
 END
 
 PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
@@ -442,7 +442,7 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
      IF (ABS(velCarMagnitudeDiff) GT 1) OR (ABS(velSphMagnitudeDiff) GT 1) OR (ABS(velMagnitudeDiff) GT 1) THEN STOP
 
      ;;More tests! Determinants.
-     maxDiff = 0.01
+     maxDiff = 0.001
      IF ABS(DETERM(GEO2FAC_vec  [*,*,i]) - 1.) GT maxDiff THEN STOP
      IF ABS(DETERM(GEO2FACV_vec [*,*,i]) - 1.) GT maxDiff THEN STOP
 
@@ -620,9 +620,9 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
   ;; xComp             = coords.igrf.fac.car.o
   ;; yComp             = coords.igrf.fac.car.e
   ;; zComp             = coords.igrf.fac.car.b
-  IGRFVDHNorm       = SQRT(xComp*xComp + $
-                           yComp*yComp + $
-                           zComp*zComp)
+  ;; IGRFVDHNorm       = SQRT(xComp*xComp + $
+  ;;                          yComp*yComp + $
+  ;;                          zComp*zComp)
   xComp             = coords.vel.fac.car.o
   yComp             = coords.vel.fac.car.e
   zComp             = coords.vel.fac.car.b
