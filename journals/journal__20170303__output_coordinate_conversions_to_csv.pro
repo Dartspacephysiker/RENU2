@@ -11,8 +11,10 @@ PRO PRINT_CSV,outMe,mem,levelSelName,fileName,CSV_dir,doQuit
 
   WHILE ~confirmed DO BEGIN
 
-     defaultFormatStr = !NULL
+     ;;Get format string
+     confirmedFormat = 0B
 
+     defaultFormatStr = !NULL
      FOR k=0,nOut-1 DO BEGIN
         intTypes = [2,3,12,13,14,15]
         floatTypes  = [4]
@@ -72,13 +74,15 @@ PRO PRINT_CSV,outMe,mem,levelSelName,fileName,CSV_dir,doQuit
 
      ENDFOR
 
-     ;;Now output names
-     defaultHeader   = STRJOIN(defaultOutNames,",")
-     confirmedHeader = 0B
-     PRINT,"Default header for .csv file: " + defaultHeader
+     ;;Find out--is the formatstring awesome enough?
+     confirmedFormat  = 0B
+     enterTheVortex   = 0B
+     defaultFormatStr = '(' + STRJOIN(defaultFormatStr,',",",') + ')'
 
-     cont = 0B
-     tries = 0
+     PRINT,"Default format for .csv output: " + defaultFormatStr
+
+     cont   = 0B
+     tries  = 0
      doQuit = 0B
      WHILE ~cont DO BEGIN
 
@@ -93,12 +97,103 @@ PRO PRINT_CSV,outMe,mem,levelSelName,fileName,CSV_dir,doQuit
 
         CASE 1 OF
            STRMATCH(read2,'y*',/FOLD_CASE) OR STRMATCH(read2,'1',/FOLD_CASE): BEGIN
+              formatStr       = defaultFormatStr
+              confirmedFormat = 1B
+              cont            = 1B
+           END
+           STRMATCH(read2,'n*',/FOLD_CASE) OR STRMATCH(read2,'1',/FOLD_CASE): BEGIN
+              enterTheVortex  = 1B
+              cont            = 1B
+           END
+           STRMATCH(read2,'q*',/FOLD_CASE): BEGIN
+              doQuit          = 1B
+           END
+        ENDCASE
+
+        IF KEYWORD_SET(doQuit) THEN BREAK
+
+     ENDWHILE
+
+     IF KEYWORD_SET(doQuit) THEN RETURN
+
+     ;;Get into it
+     IF KEYWORD_SET(enterTheVortex) THEN BEGIN
+
+        PRINT,"K, enter a comma-delimited format string (you need " + STRCOMPRESS(nOut,/REMOVE_ALL) + " entries)"
+        PRINT,"For reference, here's what it was GOING to be before you got all bent out of shape: "
+        PRINT,STRJOIN(STRSPLIT(defaultFormatStr,',",",',/EXTRACT),',')
+        
+        cont   = 0B
+        tries  = 0
+        doQuit = 0B
+        WHILE ~cont DO BEGIN
+
+           IF tries GT 5 THEN BEGIN
+              doQuit = 1B
+              BREAK
+           ENDIF
+
+           read = ''
+           READ,read
+
+           IF STRMATCH(read,'quit',/FOLD_CASE) OR $
+              (STRLEN(read) LT 4 AND STRMATCH(read,'q*',/FOLD_CASE)) $
+           THEN BEGIN
+              doQuit          = 1B
+              BREAK
+           ENDIF
+
+           IF N_ELEMENTS(STRSPLIT(read,',')) EQ nOut THEN BEGIN
+              PRINT,"K, got it"
+              cont            = 1B
+              formatStr       = '(' + STRJOIN(STRSPLIT(read,',',/EXTRACT),',",",') + ')'
+              confirmedFormat = 1B
+           ENDIF ELSE BEGIN
+              PRINT,"Nope, that was " + STRCOMPRESS(N_ELEMENTS(STRSPLIT(read,',')),/REMOVE_ALL) + " elements."
+              tries++
+           ENDELSE
+
+           IF KEYWORD_SET(doQuit) THEN BREAK
+           
+        ENDWHILE
+
+     ENDIF
+
+     IF KEYWORD_SET(doQuit) THEN BREAK
+
+     ;;Now set up header
+     defaultHeader   = STRJOIN(defaultOutNames,",")
+     confirmedHeader = 0B
+     enterTheVortex  = 0B
+     PRINT,"Default header for .csv file: " + defaultHeader
+
+     cont   = 0B
+     tries  = 0
+     doQuit = 0B
+     WHILE ~cont DO BEGIN
+
+        IF tries GT 5 THEN BEGIN
+           doQuit = 1B
+           BREAK
+        ENDIF
+
+        PRINT,(tries EQ 0 ? "You likee?" : "Now really, tell me.") + " (y/n/q)"
+        read2 = ''
+        READ,read2
+
+        CASE 1 OF
+           read2 EQ '': BEGIN
+              PRINT,"Eh?"
+              tries++
+           END
+           STRMATCH(read2,'y*',/FOLD_CASE) OR STRMATCH(read2,'1',/FOLD_CASE): BEGIN
               header          = defaultHeader
               confirmedHeader = 1B
               cont = 1B
            END
            STRMATCH(read2,'n*',/FOLD_CASE) OR STRMATCH(read2,'1',/FOLD_CASE): BEGIN
               enterTheVortex = 1B
+              cont           = 1B
            END
            STRMATCH(read2,'q*',/FOLD_CASE): BEGIN
               doQuit = 1B
@@ -126,6 +221,13 @@ PRO PRINT_CSV,outMe,mem,levelSelName,fileName,CSV_dir,doQuit
            read = ''
            READ,read
 
+           IF STRMATCH(read,'quit',/FOLD_CASE) OR $
+              (STRLEN(read) LT 4 AND STRMATCH(read,'q*',/FOLD_CASE)) $
+           THEN BEGIN
+              doQuit          = 1B
+              BREAK
+           ENDIF
+
            IF N_ELEMENTS(STRSPLIT(read,',')) EQ nOut THEN BEGIN
               PRINT,"K, got it"
               cont            = 1
@@ -142,8 +244,7 @@ PRO PRINT_CSV,outMe,mem,levelSelName,fileName,CSV_dir,doQuit
 
      ENDIF
 
-     formatString = '(' + STRJOIN(defaultFormatStr,',",",') + ')'
-     PRINT,"FormatString will be " + formatString
+     PRINT,"Format string will be " + formatStr
      PRINT,"Header will be " + header
 
      PRINT,(tries EQ 0 ? "Can I pull the trigger?" : "Now really, tell me.") + " (y/n/q)"
@@ -178,7 +279,7 @@ PRO PRINT_CSV,outMe,mem,levelSelName,fileName,CSV_dir,doQuit
   OPENW,outLun,CSV_dir+fileName,/GET_LUN
   
   PRINTF,outLun,header
-  execStr = 'FOR k=0,nHere-1 DO PRINTF,outLun,FORMAT=formatString,' + structString
+  execStr = 'FOR k=0,nHere-1 DO PRINTF,outLun,FORMAT=formatStr,' + structString
   IF ~EXECUTE(execStr) THEN STOP
 
   CLOSE,outLun
@@ -186,9 +287,8 @@ PRO PRINT_CSV,outMe,mem,levelSelName,fileName,CSV_dir,doQuit
 
   PRINT,"Outputted " + CSV_dir+fileName
 
-  STOP
 END
-PRO READ_TAG_SELECTION,theseTags,uniqTags,uniqTag_i,nnTags,level,levelSelName,levelSelNum,nTags,allTags,splitTagsList
+PRO READ_TAG_SELECTION,theseTags,uniqTags,uniqTag_i,nnTags,level,levelSelName,levelSelNum,nTags,allTags,splitTagsList,doQuit
 
   cont  = 0B
   tries = 0B
@@ -328,11 +428,12 @@ PRO JOURNAL__20170303__OUTPUT_COORDINATE_CONVERSIONS_TO_CSV, $
   splitTagsList       = STRSPLIT(allTags,'.',/EXTRACT)
 
   level               = 0
-  levelArr            = !NULL
+  ;; levelArr            = !NULL
   done                = 0B
   levelSelNum         = !NULL
   levelSelName        = !NULL
   maxTries            = 5
+  notherCount         = 0
   WHILE ~done DO BEGIN
 
      ;;Get all unique tag names on this level 
@@ -352,14 +453,14 @@ PRO JOURNAL__20170303__OUTPUT_COORDINATE_CONVERSIONS_TO_CSV, $
      uniqDepths = depths[uniqTag_i]
      nnTags     = N_ELEMENTS(uniqTags)
 
-     PRINT,uniqDepths
+     ;; PRINT,uniqDepths
      CASE 1 OF
         (nnTags EQ 1) OR ((MAX(uniqDepths)-level) LE 2): BEGIN
 
            ;;One last read, if need be
            IF nnTags GT 1 THEN BEGIN
               READ_TAG_SELECTION, $
-                 theseTags,uniqTags,uniqTag_i,nnTags,level,levelSelName,levelSelNum,nTags,allTags,splitTagsList
+                 theseTags,uniqTags,uniqTag_i,nnTags,level,levelSelName,levelSelNum,nTags,allTags,splitTagsList,doQuit
            ENDIF ELSE BEGIN
               levelSelName = [levelSelName,uniqTags[0]]
               levelSelNum  = [levelSelNum,uniqTag_i[0]]
@@ -374,8 +475,8 @@ PRO JOURNAL__20170303__OUTPUT_COORDINATE_CONVERSIONS_TO_CSV, $
               ;; levelSelNum  = [levelSelNum,uniqTag_i[0]]
 
               ;;Nous sommes arrivés
-              PRINT,levelSelName
-              PRINT,levelSelNum
+              PRINT,"Going to write coords." + STRJOIN(levelSelName,'.') + " to file."
+              ;; PRINT,levelSelNum
               PRINT,"Look OK? (y/n/q)"
               READ,read
 
@@ -395,8 +496,11 @@ PRO JOURNAL__20170303__OUTPUT_COORDINATE_CONVERSIONS_TO_CSV, $
                           STRCOMPRESS(nMatch,/REMOVE_ALL) + '(A0,:,"  "))',nMatch,mems
 
 
+                    IF KEYWORD_SET(notherCount) THEN STOP
+
                     ;;Get struct indices
                     levelTags           = TAG_NAMES(coords)
+                    levelArr            = !NULL
                     FOR k=0,N_ELEMENTS(levelSelName)-1 DO BEGIN
                        newLevel = WHERE(STRMATCH(levelTags,'*'+levelSelName[k]+'*',/FOLD_CASE),nNewLevel)
 
@@ -439,7 +543,7 @@ PRO JOURNAL__20170303__OUTPUT_COORDINATE_CONVERSIONS_TO_CSV, $
                     fileName = filePref + STRJOIN(levelSelName,'_') + '.csv'
                     PRINT_CSV,outMe,mem,levelSelName,fileName,CSV_dir,doQuit
 
-                    STOP
+                    IF KEYWORD_SET(doQuit) THEN BREAK
                     
                     PRINT,"Do another?"
 
@@ -456,6 +560,7 @@ PRO JOURNAL__20170303__OUTPUT_COORDINATE_CONVERSIONS_TO_CSV, $
                           levelSelNum     = !NULL
                           cont            = 1B
 
+                          notherCount++
                        END
                        STRMATCH(read,'n*',/FOLD_CASE) OR STRMATCH(read,'0',/FOLD_CASE): BEGIN
                           
@@ -521,7 +626,7 @@ PRO JOURNAL__20170303__OUTPUT_COORDINATE_CONVERSIONS_TO_CSV, $
         END
         ELSE: BEGIN
 
-           READ_TAG_SELECTION,theseTags,uniqTags,uniqTag_i,nnTags,level,levelSelName,levelSelNum,nTags,allTags,splitTagsList
+           READ_TAG_SELECTION,theseTags,uniqTags,uniqTag_i,nnTags,level,levelSelName,levelSelNum,nTags,allTags,splitTagsList,doQuit
 
         END
      ENDCASE
