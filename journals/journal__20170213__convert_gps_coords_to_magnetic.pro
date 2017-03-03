@@ -13,6 +13,9 @@
 ;   December 11, 1991
 ;   Scientific Report No. 9
 ;   (http://www.dtic.mil/dtic/tr/fulltext/u2/a247550.pdf)
+;
+;2017/03/03
+;Pay a visit to JOURNAL__20170302__INSPECT_COORDINATE_CONVERSIONS if you want to see how the results shake
 FUNCTION DOTP,v1,v2
   RETURN,(TRANSPOSE(v1) # v2)[0]
 END
@@ -613,43 +616,6 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
 
   magPercentDiffGEO = (bgeosphmagnitude[1:-1]-bgeosphmagnitude[0:-2])/bgeosphmagnitude[1:-1]*100.
   magPercentDiffGSM = (bgsmcarmagnitude[1:-1]-bgsmcarmagnitude[0:-2])/bgsmcarmagnitude[1:-1]*100.
-
-  ;; xComp             = coords.igrf.vdh.car.v
-  ;; yComp             = coords.igrf.vdh.car.d
-  ;; zComp             = coords.igrf.vdh.car.h
-  ;; xComp             = coords.igrf.fac.car.o
-  ;; yComp             = coords.igrf.fac.car.e
-  ;; zComp             = coords.igrf.fac.car.b
-  ;; IGRFVDHNorm       = SQRT(xComp*xComp + $
-  ;;                          yComp*yComp + $
-  ;;                          zComp*zComp)
-  xComp             = coords.vel.fac.car.o
-  yComp             = coords.vel.fac.car.e
-  zComp             = coords.vel.fac.car.b
-  IGRFVDHNorm       = 1.D
-  yLims = MINMAX([xComp,yComp,zComp]/[IGRFVDHNorm,IGRFVDHNorm,IGRFVDHNorm])
-  ;; this0 = PLOT(renu2.time.flight,xComp, $
-  this0 = PLOT(renu2.time.flight,xComp/IGRFVDHNorm, $
-               NAME='V', $
-               COLOR='brown', $
-               ;; LINESTYLE='', $
-               ;; SYMBOL='*', $
-               YRANGE=yLims)
-  ;; this1 = PLOT(renu2.time.flight,yComp/IGRFVDHNorm, $
-  this1 = PLOT(renu2.time.flight,yComp/IGRFVDHNorm, $
-               NAME='D', $
-               COLOR='Red', $
-               ;; LINESTYLE='', $
-               ;; SYMBOL='*', $
-               /OVERPLOT)
-  ;; this2 = PLOT(renu2.time.flight,zComp/IGRFVDHNorm, $
-  this2 = PLOT(renu2.time.flight,zComp/IGRFVDHNorm, $
-               NAME='H', $
-               COLOR='Blue', $
-               ;; LINESTYLE='', $
-               ;; SYMBOL='*', $
-               /OVERPLOT)
-  leg   = LEGEND(TARGET=[this0,this1,this2])
 
   STOP
 
