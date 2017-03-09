@@ -9,7 +9,10 @@ import scipy.io as sio
 # import sys
 
 indir = '/SPENCEdata/Research/database/RENU2/csv/'
-infil = 'RENU2_VEL_FAC_CAR.csv'
+# infil = 'RENU2_VEL_FAC_CAR.csv'
+# infil = 'RENU2_VEL_FACV_CAR.csv'
+# infil = 'RENU2_VEL_NED_CAR.csv'
+infil = 'RENU2_VEL_VDH_CAR.csv'
 outfil = re.sub('\.csv$', '.mat', infil)
 
 data = []

@@ -604,7 +604,7 @@ PRO JOURNAL__20170213__CONVERT_GPS_COORDS_TO_MAGNETIC
                       geocarmagnit2
 
   velcarMagnitude   = SQRT(vel.geo.car.x*vel.geo.car.x+vel.geo.car.y*vel.geo.car.y+vel.geo.car.z*vel.geo.car.z)
-  velsphMagnitude  = SQRT(vel.geo.sph.r*vel.geo.sph.r+vel.geo.sph.theta*vel.geo.sph.theta+vel.geo.sph.phi*vel.geo.sph.phi)
+  velsphMagnitude   = SQRT(vel.geo.sph.r*vel.geo.sph.r+vel.geo.sph.theta*vel.geo.sph.theta+vel.geo.sph.phi*vel.geo.sph.phi)
   ;; velsphMagnitude   = vel.geo.sph.r ;;pff, idiot
   diffVel           = velsphMagnitude- $
                       velcarmagnitude

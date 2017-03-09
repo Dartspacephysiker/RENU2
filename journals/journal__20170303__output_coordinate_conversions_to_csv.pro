@@ -496,8 +496,6 @@ PRO JOURNAL__20170303__OUTPUT_COORDINATE_CONVERSIONS_TO_CSV, $
                           STRCOMPRESS(nMatch,/REMOVE_ALL) + '(A0,:,"  "))',nMatch,mems
 
 
-                    IF KEYWORD_SET(notherCount) THEN STOP
-
                     ;;Get struct indices
                     levelTags           = TAG_NAMES(coords)
                     levelArr            = !NULL
