@@ -20,7 +20,7 @@ PRO JOURNAL__20170221__GEO_TO_MAG_AND_VICE_VERSA__JUST_CHECK_BASIS_VECTOR_AND_CO
   ;; Calling Sequence: geopack_conv_coord(_08), s1, s2, s3, d1, d2, d3.
   ;; Inputs: s1, s2, s3: Coordinates in system of origin.
   ;; Outputs: d1, d2, d3: Coordinates in target system.
-  ;; Keywords: FROM_GEO: Specify source in geopgraphic coordinates. 
+  ;; Keywords: FROM_GEO: Specify source in geographic coordinates. 
   ;;  FROM_MAG: Specify source in geomagnetic coordinates.
   ;;  FROM_GEI: Specify source in geocentric equatorial inertial coordinates.
   ;;  FROM_SM: Specify source in solar magnetic coordinates.
